@@ -2,7 +2,7 @@
 
 ## Project purpose
 
-Build a small web application for visitors to reserve places in predefined gym classes. Keep the experience simple and suitable for demonstration and review. The current project root contains requirements and support documents only; it does not yet contain application source code.
+Build a small web application for visitors to reserve places in predefined gym classes. Keep the experience simple and suitable for demonstration and review. The current implementation includes catalogue data, reservation rules, and a class/session selection UI; participant selection and confirmation are later phases.
 
 ## Business rules
 
@@ -16,14 +16,14 @@ Build a small web application for visitors to reserve places in predefined gym c
 
 ## Structure and coding conventions
 
-- The existing root files are `BRD.md`, `REQUIREMENTS.md`, and `Support-Case.md`. Keep these as the sources for business behavior and acceptance criteria.
-- No implementation language, framework, source layout, formatting rules, or lint configuration is established yet. Follow conventions introduced by the chosen implementation and avoid documenting or assuming tools that are not present.
+- The root contains `BRD.md`, `REQUIREMENTS.md`, `Support-Case.md`, `PHASES.txt`, `PROMPTS.md`, and `index.html`, plus `css/`, `js/`, and `tests/`. Keep the BRD and requirements as sources for business behavior and acceptance criteria; use the phase and prompt records for project history.
+- The implementation uses plain browser JavaScript without a build step or dependencies. No additional formatting or lint configuration is established. Follow the existing code style and avoid assuming tools that are not present.
 - Keep implementation focused on the reservation flow and avoid unnecessary dependencies or unrelated refactoring.
 
 ## Testing and verification
 
-- No automated test suite or test-running command exists in the current project structure. Do not assume a particular test framework or invent a command.
-- When implementation and test tooling are introduced, document and use the actual test command supplied by that tooling. Add focused tests for changed behavior.
+- Automated tests run in the browser through `tests/tests.html`; open that file in a browser to run the suite. The application can be opened from `index.html`. There is no Node-based or command-line test runner in the project.
+- Add focused tests for changed behavior and keep the browser test page loading the relevant test files.
 - Verify changes against the acceptance criteria in `REQUIREMENTS.md`. In particular, test the support-case sequence: Yoga — Wednesday 19:00 starts with 6 places; confirming 2 leaves 4; starting another reservation without refreshing or closing the browser must still show 4. Also verify that refresh/reopening restores initial availability.
 - Check the relevant flow for class/session selection, availability, participant limits, price calculation, summary edits, invalid reservations, confirmation, and starting another reservation.
 

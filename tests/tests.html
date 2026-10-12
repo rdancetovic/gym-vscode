@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gym Reservation Tests</title>
+  <style>
+    body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem auto; max-width: 56rem; padding: 0 1rem; }
+    #summary { font-weight: 700; }
+    li { margin: 0.25rem 0; }
+    [data-result="pass"] { color: #176b35; }
+    [data-result="fail"] { color: #a32222; }
+    #sandbox { position: fixed; inset-inline-start: -10000px; width: 1px; height: 1px; overflow: hidden; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Gym Reservation Tests</h1>
+    <p id="summary" aria-live="polite">Running tests…</p>
+    <ol id="results"></ol>
+    <div id="sandbox" aria-hidden="true"></div>
+  </main>
+  <script src="../js/data.js"></script>
+  <script src="../js/reservation.js"></script>
+  <script src="testkit.js"></script>
+  <script src="data.test.js"></script>
+  <script src="reservation.test.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="ui.test.js"></script>
+  <script>runTests();</script>
+</body>
+</html>

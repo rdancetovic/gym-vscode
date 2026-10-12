@@ -1,0 +1,138 @@
+GYM CLASS RESERVATION — WORK DONE PER PHASE
+===========================================
+Requirements: REQUIREMENTS.md
+Run tests:    double-click tests\tests.html  (all rows must be green)
+Run app:      double-click index.html        (available from Phase 3)
+Tech:         plain HTML/CSS/JavaScript, no build, no installs (Node not available)
+
+
+PHASE 1 — Catalogue data + test harness            [DONE 2026-10-02]
+-------------------------------------------------------------------
+Files:  js/data.js, tests/testkit.js, tests/data.test.js, tests/tests.html
+Work:   Entered the 4 classes with prices and the 12 sessions with initial
+        places from REQUIREMENTS.md §3–4. Data is frozen (read-only).
+        createInitialState() returns a fresh copy of availability on every
+        call, so a page load always starts from the initial numbers (§12).
+        Built a tiny in-browser test kit (describe / it / assert).
+Tests:  21 automated tests, all passing.
+How to check: open tests\tests.html → "All 21 tests passed". Change a price
+        in js/data.js and refresh → a test turns red.
+
+
+PHASE 2 — Reservation rules (no UI)                 [DONE 2026-10-02]
+-------------------------------------------------------------------
+Files:  js/reservation.js, tests/reservation.test.js (tests.html updated)
+Work:   Pure business rules, no screen:
+         - getRemaining / isFull / isClassFull — availability lookups
+         - calcTotal — participants × price (§9); formatPrice → "€36"
+         - validate — returns every problem with a code and a user-facing
+           message: no class, no session, unknown/mismatched session, full
+           session, participants < 1, not a whole number, more than the
+           remaining places (§8, §14)
+         - confirm — only for a valid draft; returns a NEW state with the
+           places deducted plus a booking record (class, session,
+           participants, price each, total). Never changes the old state.
+Tests:  29 new tests (50 total), all passing. Include the BRD example
+        (Yoga Wed 6 → book 2 → 4), Pilates Sat full refused, Spinning Thu
+        1 ok / 2 refused, exact-capacity boundaries, repeated bookings until
+        full, a whole class becoming full, refresh reset.
+How to check: open tests\tests.html → "All 50 tests passed".
+
+
+PHASE 3 — Choose class and session (UI)             [DONE 2026-10-02]
+-------------------------------------------------------------------
+Files:  index.html, css/styles.css, js/ui.js, js/app.js,
+        tests/ui.test.js (tests.html updated with an off-screen sandbox)
+Work:   First real screen. Step 1 shows the 4 classes as cards with price per
+        participant. Step 2 shows the selected class's 3 sessions with day,
+        time and places left ("6 places left", "1 place left", "Full").
+        Full sessions stay visible but are crossed out and cannot be picked.
+        Low availability (2 or fewer) is highlighted. A class with every
+        session full shows "No places available". Changing the class clears
+        the session and resets participants to 1. A "Your selection" line
+        shows the current choice. Options are real radio buttons, so the
+        keyboard works (Tab + arrow keys). Light and dark theme follow the
+        system setting. State is in memory only.
+Tests:  12 new UI tests (62 total), all passing. They click the options like
+        a user would and check what is shown.
+How to check: double-click index.html → choose each class and compare its
+        sessions with REQUIREMENTS.md §4; Pilates Saturday 11:30 shows Full
+        and can't be clicked; switching class clears the session.
+        tests\tests.html → "All 62 tests passed".
+PHASE 4 — Participants and live summary             [DONE 2026-10-02]
+-------------------------------------------------------------------
+Files:  js/ui.js (extended), css/styles.css (extended),
+        tests/ui-helpers.js (shared test helpers), tests/participants.test.js,
+        tests/ui.test.js (selection line replaced by the summary),
+        js/reservation.js (nicer "Only N places remaining" message)
+Work:   Step 3 "Number of participants": − / number field / + . Enabled only
+        once a session is chosen; starts at 1; − stops at 1, + stops at the
+        places left; typing any number is allowed but validated live.
+        Changing to a session with fewer places reduces the number and says
+        so ("...participants were reduced from 8 to 6"); otherwise it is kept.
+        Step 4 "Review your reservation": class, session, participants, price
+        per participant and total (participants × price), updated as you go.
+        Below it: either "ready to confirm" (green) or "Before you can
+        confirm:" with the list of reasons (amber). The Confirm button is
+        disabled until the reservation is valid. In this phase Confirm does
+        not book yet — it shows a note that booking arrives in Phase 5.
+Tests:  21 new tests (83 total), all passing.
+How to check: index.html → Yoga, Monday, type 8, switch to Wednesday → 6
+        and a note; Pilates Thursday, type 5 → "Only 4 places remaining",
+        Confirm disabled; Functional, 3 → total €36. tests\tests.html →
+        "All 83 tests passed".
+PHASE 5 — Confirm, confirmation, book again         [DONE 2026-10-02]
+-------------------------------------------------------------------
+Files:  js/ui.js (extended), css/styles.css (confirmation styles),
+        tests/confirm.test.js, tests/participants.test.js (Phase 4
+        placeholder test replaced)
+Work:   "Confirm reservation" now books: the places are deducted from the
+        session (in memory only) and the form is replaced by a
+        "Reservation confirmed" screen — e.g. "You reserved 2 places for
+        Yoga on Wednesday 19:00." — with class, session, participants,
+        price each, total, places still left in the session (or "This
+        session is now full.") and "No payment is taken in this app."
+        "Make another reservation" returns to an empty form; the reduced
+        availability is kept. A double click / second call can't book twice
+        (confirm only works from the form). Invalid reservations can't be
+        confirmed even by calling confirm directly. Keyboard focus moves to
+        the confirmation heading, and back to the first class afterwards.
+        A page refresh restores the initial availability.
+Tests:  16 new tests (99 total), all passing — incl. the BRD example
+        6 → 4, accumulated bookings, last place → Full, whole class booked
+        out, double click, refresh reset, and "no personal data fields"
+        (only radio buttons and the number field exist, §16).
+How to check: index.html → Yoga, Wednesday, 2, Confirm → confirmation,
+        €16, 4 left → "Make another reservation" → Yoga Wednesday shows
+        "4 places left". Spinning Thursday, 1, Confirm → "now full" → it
+        shows Full afterwards. Refresh (F5) → back to 6 and 1.
+        tests\tests.html → "All 99 tests passed".
+PHASE 6 — Polish, accessibility, TEST_PLAN.md       [DONE 2026-10-02]
+-------------------------------------------------------------------
+Files:  js/ui.js, css/styles.css, tests/a11y.test.js,
+        tests/ui-helpers.js, TEST_PLAN.md
+Work:   Accessibility:
+         - One permanent, hidden screen-reader live region announces what
+           changed ("Before you can confirm: …", "Ready to confirm. Total
+           €16.", "Reservation confirmed. …"). The visible status boxes are
+           rebuilt on every change, which screen readers don't announce
+           reliably. Nothing is announced on page load.
+         - Confirm button is linked (aria-describedby) to the reason text.
+         - Colour contrast checked against WCAG AA (4.5:1) for every text
+           colour pair in both themes. Fixed two failures: dark-theme
+           buttons/step numbers (white on light blue, 2.7:1 → dark text,
+           6.9:1) and light-theme −/+ (4.0:1 → darker blue, 5.1:1).
+         - Disabled steps no longer fade the text (which lowered contrast).
+         - Respects "reduce motion" system setting.
+        Phone layout: checked at 390px width (light + dark). Classes in 2
+        columns, sessions stacked, full-width buttons, tighter padding.
+        TEST_PLAN.md: how to run, a requirement → test traceability table
+        for every REQUIREMENTS.md section, 13 manual checks (M1–M13) with
+        exact expected results, the automated test inventory, known limits.
+        Confirmed the code has no storage, network calls or forms (§17).
+Tests:  13 new accessibility tests (112 total), all passing.
+How to check: follow TEST_PLAN.md M1–M13. tests\tests.html → "All 112
+        tests passed".
+
+
+ALL PHASES COMPLETE — 112 automated tests passing.

@@ -86,3 +86,23 @@ Record significant AI prompts used during project development and the resulting 
 > Do not invent project-specific tools, commands, or conventions. Inspect existing files before documenting them. Do not modify application code.
 
 **Resulting change:** Created `AGENTS.md` with business rules, current structure and convention constraints, test guidance based on the absence of an existing test suite or test command, acceptance-criteria checks, scope guidance, and Git practices. No application code was modified.
+
+## 4. Implement Phases 1 and 2
+
+**Purpose:** Implement the catalogue data, in-browser test harness, and reservation business rules described in `PHASES.txt`.
+
+**Prompt:**
+
+> do you think that you can implement the first 2 phases now?
+
+**Resulting change:** Added `js/data.js` and `js/reservation.js`, plus `tests/testkit.js`, `tests/data.test.js`, `tests/reservation.test.js`, and `tests/tests.html`. The suite contains 50 browser tests for catalogue data and reservation rules. Updated `AGENTS.md` to reflect the new project structure and browser test harness. Automated tests remain unverified because no browser executable was found in standard locations or on PATH, and Node is unavailable.
+
+## 5. Implement Phase 3
+
+**Purpose:** Add the class and session selection interface described in `PHASES.txt`.
+
+**Prompt:**
+
+> execute phase 3
+
+**Resulting change:** Added `index.html`, `css/styles.css`, `js/ui.js`, `js/app.js`, and `tests/ui.test.js`; updated `tests/tests.html` to include the off-screen UI test sandbox; updated `AGENTS.md` to reflect the interface and test page. The browser suite now contains 62 tests. Automated results remain unverified because no browser executable or Node runtime is available in the environment.

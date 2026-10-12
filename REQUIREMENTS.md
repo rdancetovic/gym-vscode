@@ -29,7 +29,7 @@ This document consolidates the business and functional requirements in `BRD.md` 
 | FR-019 | After a successful reservation, the user shall be able to start another reservation and return to a state where a new reservation can be created. Starting another reservation shall not discard confirmed availability changes from the current browser session. | The user can begin another reservation; prior confirmed deductions remain visible during that browser session. |
 | FR-020 | The application shall provide a simple, understandable web interface supporting class selection, session selection, availability review, participant selection, reservation review, confirmation, error feedback, confirmation display, and starting another reservation. The exact visual design is unspecified. | A reviewer can complete and inspect the reservation flow and its representative states. |
 | FR-021 | The reservation shall be anonymous. The application shall not require or collect a name, email address, telephone number, postal address, account information, or payment information. | None of the listed personal or account/payment data is requested or collected. |
-| FR-022 | The application shall remain within the defined reservation scope. | No user accounts, authentication, memberships, subscriptions, payment processing, discounts, database storage, backend/server-side functionality, live multi-user availability, waiting lists, personal-trainer scheduling, cancellation, rescheduling, trainer management, email/SMS confirmation, external calendar integration, external APIs, or complex date/calendar calculations are required. |
+| FR-022 | The application shall include only the gym-class reservation functionality described in the BRD; the following are outside scope. | User accounts, authentication, memberships, subscriptions, payment processing, discounts or promotions, database storage, backend or server-side functionality, live multi-user availability, waiting lists, personal-trainer scheduling, cancellation, rescheduling, trainer management, email or SMS confirmation, external calendar integration, external APIs, and complex date or calendar calculations are outside scope. |
 
 ## Session inventory
 
@@ -50,10 +50,13 @@ This document consolidates the business and functional requirements in `BRD.md` 
 
 ## Support-case finding
 
-The reported reset to 6 places after starting another reservation is not expected behavior under FR-016 and FR-019. The BRD requires the confirmed deduction to remain during the current browser session. The reported sequence (6 available, confirm 2, then 4, start another reservation without refreshing, then 6) therefore describes behavior that violates the stated requirement.
+The reported reset to 6 places after starting another reservation is not expected behavior under FR-016 and FR-019. The BRD requires the confirmed deduction to remain during the current browser session. The reported sequence (6 available, confirm 2, then 4, start another reservation without refreshing or closing the browser, then 6) therefore describes behavior that violates the stated requirement. The client reports reproducing the same result when trying the steps a second time.
+
+## Support-task deliverable
+
+The support case asks for an evidence-based decision to respond that the behavior is expected, request more information, or escalate, and for the resulting text to be prepared for the client support platform. This is a support workflow deliverable, not an application requirement. The supplied documents describe the reported behavior but do not include independent application evidence or a test run, so they do not establish the defect's root cause.
 
 ## Ambiguities and evidence limits
 
 - The provided documents establish the expected behavior and describe the observed behavior, but do not include independent application evidence, implementation details, or a test run. The defect’s root cause cannot be determined from these documents alone.
-- The BRD states both a maximum capacity of 10 and lower initial availability for some sessions. It does not explain why those starting values are lower; this document treats the listed initial availability as authoritative and does not infer prior reservations.
 - The BRD defines reset behavior for refresh/reopening and persistence during the current browser session, but does not further define browser-session lifecycle details. The support case’s specific no-refresh/no-close scenario is clear and is captured in FR-016.

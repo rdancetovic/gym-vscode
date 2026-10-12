@@ -95,7 +95,7 @@ Record significant AI prompts used during project development and the resulting 
 
 > do you think that you can implement the first 2 phases now?
 
-**Resulting change:** Added `js/data.js` and `js/reservation.js`, plus `tests/testkit.js`, `tests/data.test.js`, `tests/reservation.test.js`, and `tests/tests.html`. The suite contains 50 browser tests for catalogue data and reservation rules. Updated `AGENTS.md` to reflect the new project structure and browser test harness. Automated tests remain unverified because no browser executable was found in standard locations or on PATH, and Node is unavailable.
+**Resulting change:** Added `js/data.js` and `js/reservation.js`, plus `tests/testkit.js`, `tests/data.test.js`, `tests/reservation.test.js`, and `tests/tests.html`. The suite contains 50 browser tests for catalogue data and reservation rules. Updated `AGENTS.md` to reflect the new project structure and browser test harness. The Phase 1–2 tests were later run with the Phase 3 suite in the integrated browser; all 62 tests passed.
 
 ## 5. Implement Phase 3
 
@@ -105,4 +105,14 @@ Record significant AI prompts used during project development and the resulting 
 
 > execute phase 3
 
-**Resulting change:** Added `index.html`, `css/styles.css`, `js/ui.js`, `js/app.js`, and `tests/ui.test.js`; updated `tests/tests.html` to include the off-screen UI test sandbox; updated `AGENTS.md` to reflect the interface and test page. The browser suite now contains 62 tests. Automated results remain unverified because no browser executable or Node runtime is available in the environment.
+**Resulting change:** Added `index.html`, `css/styles.css`, `js/ui.js`, `js/app.js`, and `tests/ui.test.js`; updated `tests/tests.html` to include the off-screen UI test sandbox; updated `AGENTS.md` to reflect the interface and test page. All 62 browser tests passed, and the selection flow and mobile layout were checked in the integrated browser.
+
+## 6. Implement Phase 4
+
+**Purpose:** Add participant controls, live reservation summary, and validation feedback from the Phase 4 specification.
+
+**Prompt:**
+
+> everything seems fine. proceed with phase 4
+
+**Resulting change:** Extended `js/ui.js` and `css/styles.css` with bounded participant controls, session-change adjustment, live summary and validation, and a non-booking Phase 5 confirmation placeholder. Added shared UI test helpers and 21 participant/summary tests, updated Phase 3 UI tests and `tests/tests.html`; updated `AGENTS.md`. All 83 browser tests passed. The live summary, reduced-availability adjustment, and responsive layout were also checked in the integrated browser.

@@ -9,12 +9,9 @@
 
     const currentState = state || data.createInitialState();
     const selection = { classId: null, sessionId: null, participants: 1 };
+    let reductionMessage = "";
 
     root.innerHTML = [
-      '<p class="selection-line" aria-live="polite">',
-      '  <span class="selection-label">Your selection</span>',
-      '  <span class="selection-value" data-selection-value>No class selected</span>',
-      '</p>',
       '<div class="selection-columns">',
       '  <section class="selection-section" aria-labelledby="class-legend">',
       '    <fieldset>',
@@ -28,13 +25,46 @@
       '      <div data-session-content><p class="no-class-message">No class selected</p></div>',
       '    </fieldset>',
       '  </section>',
+      '</div>',
+      '<div class="reservation-details">',
+      '  <section class="participant-section" aria-labelledby="participants-heading">',
+      '    <h2 id="participants-heading"><span class="step-label">03</span> Number of participants</h2>',
+      '    <div class="participant-control" data-participant-controls>',
+      '      <button type="button" data-decrease aria-label="Decrease participants" disabled>−</button>',
+      '      <label class="visually-hidden" for="participant-count">Number of participants</label>',
+      '      <input id="participant-count" data-participant-input type="number" min="1" step="any" value="1" disabled>',
+      '      <button type="button" data-increase aria-label="Increase participants" disabled>+</button>',
+      '    </div>',
+      '    <p class="participant-note" data-participant-note>Choose a session to set the participant count.</p>',
+      '    <p class="reduction-message" data-reduction-message hidden></p>',
+      '  </section>',
+      '  <section class="summary-section" aria-labelledby="summary-heading">',
+      '    <h2 id="summary-heading"><span class="step-label">04</span> Review your reservation</h2>',
+      '    <dl class="summary-grid">',
+      '      <div><dt>Class</dt><dd data-summary-class>—</dd></div>',
+      '      <div><dt>Session</dt><dd data-summary-session>—</dd></div>',
+      '      <div><dt>Participants</dt><dd data-summary-participants>—</dd></div>',
+      '      <div><dt>Price per participant</dt><dd data-summary-unit-price>—</dd></div>',
+      '      <div class="summary-total"><dt>Total</dt><dd data-summary-total>—</dd></div>',
+      '    </dl>',
+      '    <div class="reservation-status is-invalid" data-reservation-status role="status">',
+      '      <p class="status-heading" data-status-heading>Before you can confirm:</p>',
+      '      <ul data-status-problems></ul>',
+      '    </div>',
+      '    <button class="confirm-button" type="button" data-confirm disabled>Confirm reservation</button>',
+      '    <p class="phase-note" data-phase-note hidden>Reservation booking will be available in Phase 5.</p>',
+      '  </section>',
       '</div>'
     ].join("");
 
     const classList = root.querySelector("[data-class-list]");
     const sessionHeading = root.querySelector("[data-session-heading]");
     const sessionContent = root.querySelector("[data-session-content]");
-    const selectionValue = root.querySelector("[data-selection-value]");
+    const participantInput = root.querySelector("[data-participant-input]");
+    const participantNote = root.querySelector("[data-participant-note]");
+    const reductionMessageElement = root.querySelector("[data-reduction-message]");
+    const phaseNote = root.querySelector("[data-phase-note]");
+    const confirmButton = root.querySelector("[data-confirm]");
 
     function createClassOption(gymClass, index) {
       const label = document.createElement("label");
@@ -132,24 +162,66 @@
       sessionContent.appendChild(list);
     }
 
-    function renderSelection() {
-      const gymClass = data.getClassById(selection.classId);
-      if (!gymClass) {
-        selectionValue.textContent = "No class selected";
-        return;
+    function renderParticipants(preserveInput) {
+      const remaining = selection.sessionId ? reservation.getRemaining(currentState, selection.sessionId) : null;
+      const hasAvailableSession = remaining !== null && remaining > 0;
+      const decreaseButton = root.querySelector("[data-decrease]");
+      const increaseButton = root.querySelector("[data-increase]");
+
+      participantInput.disabled = !hasAvailableSession;
+      participantInput.max = hasAvailableSession ? String(remaining) : "";
+      if (!preserveInput || document.activeElement !== participantInput) {
+        participantInput.value = String(selection.participants);
       }
-      if (!selection.sessionId) {
-        selectionValue.textContent = gymClass.name + " · No session selected";
-        return;
-      }
-      const found = data.findSession(selection.sessionId);
-      selectionValue.textContent = gymClass.name + " · " + found.session.day + " " + found.session.time;
+      decreaseButton.disabled = !hasAvailableSession || Number(selection.participants) <= 1;
+      increaseButton.disabled = !hasAvailableSession || Number(selection.participants) >= remaining;
+      participantNote.textContent = hasAvailableSession
+        ? "Choose between 1 and " + remaining + " participants."
+        : "Choose an available session to set the participant count.";
+      reductionMessageElement.textContent = reductionMessage;
+      reductionMessageElement.hidden = !reductionMessage;
     }
 
-    function render() {
+    function renderSummary() {
+      const gymClass = data.getClassById(selection.classId);
+      const foundSession = selection.sessionId ? data.findSession(selection.sessionId) : null;
+      const summaryValues = {
+        "[data-summary-class]": gymClass ? gymClass.name : "—",
+        "[data-summary-session]": foundSession ? foundSession.session.day + " " + foundSession.session.time : "—",
+        "[data-summary-participants]": foundSession ? String(selection.participants) : "—",
+        "[data-summary-unit-price]": gymClass ? reservation.formatPrice(gymClass.price) : "—",
+        "[data-summary-total]": gymClass && foundSession
+          ? reservation.formatPrice(reservation.calcTotal(gymClass.id, selection.participants))
+          : "—"
+      };
+      Object.keys(summaryValues).forEach(function (selector) {
+        root.querySelector(selector).textContent = summaryValues[selector];
+      });
+
+      const problems = reservation.validate(selection, currentState);
+      const problemList = root.querySelector("[data-status-problems]");
+      const status = root.querySelector("[data-reservation-status]");
+      const statusHeading = root.querySelector("[data-status-heading]");
+      const isValid = problems.length === 0;
+      problemList.textContent = "";
+      status.classList.toggle("is-valid", isValid);
+      status.classList.toggle("is-invalid", !isValid);
+      statusHeading.textContent = isValid ? "Ready to confirm" : "Before you can confirm:";
+      problems.forEach(function (problem) {
+        const item = document.createElement("li");
+        item.textContent = problem.message;
+        problemList.appendChild(item);
+      });
+      confirmButton.disabled = !isValid;
+    }
+
+    function render(options) {
+      const settings = options || {};
       updateClassOptions();
       renderSessions();
-      renderSelection();
+      renderParticipants(settings.preserveParticipantInput);
+      renderSummary();
+      phaseNote.hidden = true;
     }
 
     function handleChange(event) {
@@ -158,23 +230,59 @@
         selection.classId = target.value;
         selection.sessionId = null;
         selection.participants = 1;
+        reductionMessage = "";
         render();
       } else if (target.matches('input[name="gym-session"]') && !target.disabled) {
+        const previousCount = Number(selection.participants);
+        const remaining = reservation.getRemaining(currentState, target.value);
         selection.sessionId = target.value;
+        reductionMessage = "";
+        if (Number.isFinite(previousCount) && previousCount > remaining) {
+          selection.participants = remaining;
+          reductionMessage = "Participants were reduced from " + previousCount + " to " + remaining + " to fit the places remaining.";
+        }
         render();
       }
+    }
+
+    function handleInput(event) {
+      if (!event.target.matches("[data-participant-input]")) return;
+      selection.participants = event.target.value === "" ? "" : Number(event.target.value);
+      reductionMessage = "";
+      render({ preserveParticipantInput: true });
+    }
+
+    function handleClick(event) {
+      const target = event.target;
+      if (target.matches("[data-decrease]") && !target.disabled) {
+        selection.participants = Math.max(1, Number(selection.participants) - 1);
+      } else if (target.matches("[data-increase]") && !target.disabled) {
+        const remaining = reservation.getRemaining(currentState, selection.sessionId);
+        selection.participants = Math.min(remaining, Number(selection.participants) + 1);
+      } else if (target.matches("[data-confirm]") && !target.disabled) {
+        phaseNote.hidden = false;
+        return;
+      } else {
+        return;
+      }
+      reductionMessage = "";
+      render();
     }
 
     data.classes.forEach(function (gymClass, index) {
       classList.appendChild(createClassOption(gymClass, index));
     });
     root.addEventListener("change", handleChange);
+    root.addEventListener("input", handleInput);
+    root.addEventListener("click", handleClick);
     render();
 
     return {
       getSelection: function () { return Object.assign({}, selection); },
       destroy: function () {
         root.removeEventListener("change", handleChange);
+        root.removeEventListener("input", handleInput);
+        root.removeEventListener("click", handleClick);
         root.textContent = "";
       }
     };

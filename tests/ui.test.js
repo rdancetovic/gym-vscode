@@ -1,31 +1,9 @@
 (function () {
   "use strict";
 
-  const sandbox = document.getElementById("sandbox");
-
-  function withApp(run, state) {
-    const host = document.createElement("div");
-    sandbox.appendChild(host);
-    const app = GymUI.mount(host, state || GymData.createInitialState());
-    try {
-      run(host, app);
-    } finally {
-      app.destroy();
-      host.remove();
-    }
-  }
-
-  function chooseClass(host, classId) {
-    const input = host.querySelector('input[name="gym-class"][value="' + classId + '"]');
-    input.click();
-    return input;
-  }
-
-  function chooseSession(host, sessionId) {
-    const input = host.querySelector('input[name="gym-session"][value="' + sessionId + '"]');
-    input.click();
-    return input;
-  }
+  const withApp = UiTestHelpers.withApp;
+  const chooseClass = UiTestHelpers.chooseClass;
+  const chooseSession = UiTestHelpers.chooseSession;
 
   describe("Class and session selection UI", function () {
     it("shows all four classes and their prices", function () {
@@ -85,12 +63,12 @@
         assert.isTrue(host.querySelector(".no-places-message").textContent.includes("No places available"));
       }, state);
     });
-    it("shows the current class and session in Your selection", function () {
+    it("shows the current class and session in the reservation summary", function () {
       withApp(function (host) {
         chooseClass(host, "yoga");
-        assert.isTrue(host.querySelector("[data-selection-value]").textContent.includes("Yoga"));
         chooseSession(host, "yoga-wednesday-1900");
-        assert.equal(host.querySelector("[data-selection-value]").textContent, "Yoga · Wednesday 19:00");
+        assert.equal(host.querySelector("[data-summary-class]").textContent, "Yoga");
+        assert.equal(host.querySelector("[data-summary-session]").textContent, "Wednesday 19:00");
       });
     });
     it("clears the session and resets participants when the class changes", function () {

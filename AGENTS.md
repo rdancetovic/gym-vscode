@@ -2,7 +2,7 @@
 
 ## Project purpose
 
-Build a small web application for visitors to reserve places in predefined gym classes. Keep the experience simple and suitable for demonstration and review. The current implementation includes catalogue data, reservation rules, and a class/session selection UI; participant selection and confirmation are later phases.
+Build a small web application for visitors to reserve places in predefined gym classes. Keep the experience simple and suitable for demonstration and review. The current implementation includes catalogue data, reservation rules, class/session selection, participant selection, and a live reservation summary; booking confirmation is a later phase.
 
 ## Business rules
 

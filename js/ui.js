@@ -7,11 +7,14 @@
   function mount(root, state) {
     if (!root) throw new Error("A root element is required to mount the reservation UI.");
 
-    const currentState = state || data.createInitialState();
+    let currentState = state || data.createInitialState();
     const selection = { classId: null, sessionId: null, participants: 1 };
     let reductionMessage = "";
+    let screen = "form";
+    let lastBooking = null;
 
     root.innerHTML = [
+      '<div data-reservation-form>',
       '<div class="selection-columns">',
       '  <section class="selection-section" aria-labelledby="class-legend">',
       '    <fieldset>',
@@ -52,18 +55,20 @@
       '      <ul data-status-problems></ul>',
       '    </div>',
       '    <button class="confirm-button" type="button" data-confirm disabled>Confirm reservation</button>',
-      '    <p class="phase-note" data-phase-note hidden>Reservation booking will be available in Phase 5.</p>',
       '  </section>',
-      '</div>'
+      '</div>',
+      '</div>',
+      '<section class="confirmation-screen" data-confirmation hidden></section>'
     ].join("");
 
+    const formContent = root.querySelector("[data-reservation-form]");
+    const confirmationContent = root.querySelector("[data-confirmation]");
     const classList = root.querySelector("[data-class-list]");
     const sessionHeading = root.querySelector("[data-session-heading]");
     const sessionContent = root.querySelector("[data-session-content]");
     const participantInput = root.querySelector("[data-participant-input]");
     const participantNote = root.querySelector("[data-participant-note]");
     const reductionMessageElement = root.querySelector("[data-reduction-message]");
-    const phaseNote = root.querySelector("[data-phase-note]");
     const confirmButton = root.querySelector("[data-confirm]");
 
     function createClassOption(gymClass, index) {
@@ -99,7 +104,12 @@
     function updateClassOptions() {
       classList.querySelectorAll(".class-option").forEach(function (option) {
         const input = option.querySelector("input");
+        const unavailable = option.querySelector(".class-unavailable");
+        const isFull = reservation.isClassFull(currentState, input.value);
+        input.checked = input.value === selection.classId;
         option.classList.toggle("is-selected", input.value === selection.classId);
+        unavailable.textContent = isFull ? "No places available" : "";
+        unavailable.hidden = !isFull;
       });
     }
 
@@ -217,14 +227,54 @@
 
     function render(options) {
       const settings = options || {};
+      formContent.hidden = screen !== "form";
+      confirmationContent.hidden = screen !== "confirmation";
       updateClassOptions();
       renderSessions();
       renderParticipants(settings.preserveParticipantInput);
       renderSummary();
-      phaseNote.hidden = true;
+    }
+
+    function renderConfirmation() {
+      const booking = lastBooking;
+      const remaining = reservation.getRemaining(currentState, booking.sessionId);
+      const placesMessage = remaining === 0
+        ? "This session is now full."
+        : remaining + (remaining === 1 ? " place left in this session." : " places left in this session.");
+
+      formContent.hidden = true;
+      confirmationContent.hidden = false;
+      confirmationContent.innerHTML = [
+        '<p class="confirmation-eyebrow">RESERVATION COMPLETE</p>',
+        '<h2 class="confirmation-heading" data-confirmation-heading tabindex="-1">Reservation confirmed</h2>',
+        '<p class="confirmation-message">You reserved ' + booking.participants + (booking.participants === 1 ? ' place for ' : ' places for ') + booking.className + ' on ' + booking.day + ' ' + booking.time + '.</p>',
+        '<dl class="confirmation-summary">',
+        '  <div><dt>Class</dt><dd>' + booking.className + '</dd></div>',
+        '  <div><dt>Session</dt><dd>' + booking.day + ' ' + booking.time + '</dd></div>',
+        '  <div><dt>Participants</dt><dd>' + booking.participants + '</dd></div>',
+        '  <div><dt>Price per participant</dt><dd>' + reservation.formatPrice(booking.priceEach) + '</dd></div>',
+        '  <div><dt>Total</dt><dd>' + reservation.formatPrice(booking.total) + '</dd></div>',
+        '</dl>',
+        '<p class="confirmation-availability" data-confirmation-availability>' + placesMessage + '</p>',
+        '<p class="no-payment-note">No payment is taken in this app.</p>',
+        '<button class="confirm-button" type="button" data-new-reservation>Make another reservation</button>'
+      ].join("");
+      confirmationContent.querySelector("[data-confirmation-heading]").focus();
+    }
+
+    function startAnotherReservation() {
+      screen = "form";
+      lastBooking = null;
+      selection.classId = null;
+      selection.sessionId = null;
+      selection.participants = 1;
+      reductionMessage = "";
+      render();
+      classList.querySelector('input[name="gym-class"]').focus();
     }
 
     function handleChange(event) {
+      if (screen !== "form") return;
       const target = event.target;
       if (target.matches('input[name="gym-class"]')) {
         selection.classId = target.value;
@@ -246,6 +296,7 @@
     }
 
     function handleInput(event) {
+      if (screen !== "form") return;
       if (!event.target.matches("[data-participant-input]")) return;
       selection.participants = event.target.value === "" ? "" : Number(event.target.value);
       reductionMessage = "";
@@ -254,13 +305,26 @@
 
     function handleClick(event) {
       const target = event.target;
+      if (screen === "confirmation" && target.matches("[data-new-reservation]")) {
+        startAnotherReservation();
+        return;
+      }
+      if (screen !== "form") return;
       if (target.matches("[data-decrease]") && !target.disabled) {
         selection.participants = Math.max(1, Number(selection.participants) - 1);
       } else if (target.matches("[data-increase]") && !target.disabled) {
         const remaining = reservation.getRemaining(currentState, selection.sessionId);
         selection.participants = Math.min(remaining, Number(selection.participants) + 1);
       } else if (target.matches("[data-confirm]") && !target.disabled) {
-        phaseNote.hidden = false;
+        const result = reservation.confirm(selection, currentState);
+        if (!result.ok) {
+          render();
+          return;
+        }
+        currentState = result.state;
+        lastBooking = result.booking;
+        screen = "confirmation";
+        renderConfirmation();
         return;
       } else {
         return;
@@ -279,6 +343,7 @@
 
     return {
       getSelection: function () { return Object.assign({}, selection); },
+      getState: function () { return currentState; },
       destroy: function () {
         root.removeEventListener("change", handleChange);
         root.removeEventListener("input", handleInput);

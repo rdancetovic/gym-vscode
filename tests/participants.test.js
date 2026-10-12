@@ -145,19 +145,17 @@
         assert.equal(host.querySelector("[data-summary-total]").textContent, "€32");
       });
     });
-    it("marks a valid reservation ready and keeps Phase 4 confirmation as a placeholder", function () {
+    it("confirms a valid reservation and updates availability", function () {
       const state = GymData.createInitialState();
-      withApp(function (host) {
+      withApp(function (host, app) {
         chooseClass(host, "yoga");
         chooseSession(host, "yoga-wednesday-1900");
         assert.isTrue(host.querySelector("[data-reservation-status]").classList.contains("is-valid"));
         assert.equal(host.querySelector("[data-status-heading]").textContent, "Ready to confirm");
-        const originalBookings = state.bookings.length;
         host.querySelector("[data-confirm]").click();
-        assert.isFalse(host.querySelector("[data-phase-note]").hidden);
-        assert.isTrue(host.querySelector("[data-phase-note]").textContent.includes("Phase 5"));
+        assert.isFalse(host.querySelector("[data-confirmation]").hidden);
+        assert.equal(app.getState().availability["yoga-wednesday-1900"], 5);
         assert.equal(state.availability["yoga-wednesday-1900"], 6);
-        assert.equal(state.bookings.length, originalBookings);
       }, state);
     });
     it("lists missing selection problems and disables confirmation", function () {

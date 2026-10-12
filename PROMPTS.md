@@ -116,3 +116,13 @@ Record significant AI prompts used during project development and the resulting 
 > everything seems fine. proceed with phase 4
 
 **Resulting change:** Extended `js/ui.js` and `css/styles.css` with bounded participant controls, session-change adjustment, live summary and validation, and a non-booking Phase 5 confirmation placeholder. Added shared UI test helpers and 21 participant/summary tests, updated Phase 3 UI tests and `tests/tests.html`; updated `AGENTS.md`. All 83 browser tests passed. The live summary, reduced-availability adjustment, and responsive layout were also checked in the integrated browser.
+
+## 7. Implement Phase 5
+
+**Purpose:** Complete the booking confirmation, in-session availability updates, and start-another-reservation flow.
+
+**Prompt:**
+
+> it works. proceed with phase 5
+
+**Resulting change:** Connected UI confirmation to the reservation rules, added a booking confirmation view and a guarded “Make another reservation” action, preserved confirmed availability in page memory, and added confirmation styles and tests. Updated the Phase 4 placeholder test and project guidance. All 99 browser tests passed; the Yoga Wednesday 6 → 4 → start-another-reservation flow and mobile confirmation layout were also verified.

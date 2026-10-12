@@ -50,15 +50,16 @@
       '      <div><dt>Price per participant</dt><dd data-summary-unit-price>—</dd></div>',
       '      <div class="summary-total"><dt>Total</dt><dd data-summary-total>—</dd></div>',
       '    </dl>',
-      '    <div class="reservation-status is-invalid" data-reservation-status role="status">',
+      '    <div class="reservation-status is-invalid" id="reservation-status" data-reservation-status>',
       '      <p class="status-heading" data-status-heading>Before you can confirm:</p>',
       '      <ul data-status-problems></ul>',
       '    </div>',
-      '    <button class="confirm-button" type="button" data-confirm disabled>Confirm reservation</button>',
+      '    <button class="confirm-button" type="button" data-confirm aria-describedby="reservation-status" disabled>Confirm reservation</button>',
       '  </section>',
       '</div>',
       '</div>',
-      '<section class="confirmation-screen" data-confirmation hidden></section>'
+      '<section class="confirmation-screen" data-confirmation hidden></section>',
+      '<p class="visually-hidden" data-live-region aria-live="polite" aria-atomic="true"></p>'
     ].join("");
 
     const formContent = root.querySelector("[data-reservation-form]");
@@ -70,6 +71,7 @@
     const participantNote = root.querySelector("[data-participant-note]");
     const reductionMessageElement = root.querySelector("[data-reduction-message]");
     const confirmButton = root.querySelector("[data-confirm]");
+    const liveRegion = root.querySelector("[data-live-region]");
 
     function createClassOption(gymClass, index) {
       const label = document.createElement("label");
@@ -225,6 +227,31 @@
       confirmButton.disabled = !isValid;
     }
 
+    function announceStatus() {
+      if (screen === "confirmation" && lastBooking) {
+        const remaining = reservation.getRemaining(currentState, lastBooking.sessionId);
+        const placesMessage = remaining === 0
+          ? "This session is now full."
+          : remaining + (remaining === 1 ? " place left in this session." : " places left in this session.");
+        liveRegion.textContent = "Reservation confirmed. You reserved " + lastBooking.participants +
+          (lastBooking.participants === 1 ? " place for " : " places for ") + lastBooking.className + " on " +
+          lastBooking.day + " " + lastBooking.time + ". Total " + reservation.formatPrice(lastBooking.total) + ". " + placesMessage;
+        return;
+      }
+
+      const problems = reservation.validate(selection, currentState);
+      if (problems.length > 0) {
+        liveRegion.textContent = "Before you can confirm: " + problems.map(function (problem) {
+          return problem.message;
+        }).join(" ");
+        return;
+      }
+
+      const total = reservation.calcTotal(selection.classId, selection.participants);
+      const readyMessage = "Ready to confirm. Total " + reservation.formatPrice(total) + ".";
+      liveRegion.textContent = reductionMessage ? reductionMessage + " " + readyMessage : readyMessage;
+    }
+
     function render(options) {
       const settings = options || {};
       formContent.hidden = screen !== "form";
@@ -233,6 +260,7 @@
       renderSessions();
       renderParticipants(settings.preserveParticipantInput);
       renderSummary();
+      if (settings.announce) announceStatus();
     }
 
     function renderConfirmation() {
@@ -260,6 +288,7 @@
         '<button class="confirm-button" type="button" data-new-reservation>Make another reservation</button>'
       ].join("");
       confirmationContent.querySelector("[data-confirmation-heading]").focus();
+      announceStatus();
     }
 
     function startAnotherReservation() {
@@ -269,7 +298,7 @@
       selection.sessionId = null;
       selection.participants = 1;
       reductionMessage = "";
-      render();
+      render({ announce: true });
       classList.querySelector('input[name="gym-class"]').focus();
     }
 
@@ -281,7 +310,7 @@
         selection.sessionId = null;
         selection.participants = 1;
         reductionMessage = "";
-        render();
+        render({ announce: true });
       } else if (target.matches('input[name="gym-session"]') && !target.disabled) {
         const previousCount = Number(selection.participants);
         const remaining = reservation.getRemaining(currentState, target.value);
@@ -291,7 +320,7 @@
           selection.participants = remaining;
           reductionMessage = "Participants were reduced from " + previousCount + " to " + remaining + " to fit the places remaining.";
         }
-        render();
+        render({ announce: true });
       }
     }
 
@@ -300,7 +329,7 @@
       if (!event.target.matches("[data-participant-input]")) return;
       selection.participants = event.target.value === "" ? "" : Number(event.target.value);
       reductionMessage = "";
-      render({ preserveParticipantInput: true });
+      render({ preserveParticipantInput: true, announce: true });
     }
 
     function handleClick(event) {
@@ -318,7 +347,7 @@
       } else if (target.matches("[data-confirm]") && !target.disabled) {
         const result = reservation.confirm(selection, currentState);
         if (!result.ok) {
-          render();
+          render({ announce: true });
           return;
         }
         currentState = result.state;
@@ -330,7 +359,7 @@
         return;
       }
       reductionMessage = "";
-      render();
+      render({ announce: true });
     }
 
     data.classes.forEach(function (gymClass, index) {

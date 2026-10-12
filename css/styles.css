@@ -12,7 +12,7 @@
   --surface: #ffffff;
   --surface-soft: #f5f8f6;
   --ink: #182d2a;
-  --muted: #64736f;
+  --muted: #5c6b67;
   --line: #d6e0dc;
   --green: #28675b;
   --green-dark: #174b42;
@@ -313,7 +313,7 @@ h1 {
 }
 
 .session-option.is-full .session-surface {
-  color: #74817d;
+  color: var(--muted);
   background: var(--surface-soft);
 }
 
@@ -323,7 +323,7 @@ h1 {
 }
 
 .session-option.is-full .session-status {
-  color: #626d69;
+  color: var(--muted);
   background: #e7ece9;
 }
 
@@ -397,7 +397,6 @@ h1 {
 .participant-control button:disabled {
   color: var(--muted);
   cursor: not-allowed;
-  opacity: 0.62;
 }
 
 .participant-control input {
@@ -512,7 +511,7 @@ h1 {
 
 .confirm-button:disabled {
   color: #f4f7f5;
-  background: #687b75;
+  background: #52645e;
   cursor: not-allowed;
 }
 
@@ -625,6 +624,8 @@ h1 {
   }
 
   .wordmark-mark { color: #12231f; background: #9bd1bd; }
+  .confirm-button { color: #12382f; }
+  .confirm-button:disabled { color: #f4f7f5; }
   .reservation-status.is-valid { color: #b8e7c9; background: #263e31; }
   .reservation-status.is-invalid { color: #ffe0aa; background: #463825; }
   .confirmation-availability { color: #a9dbc6; }
@@ -639,6 +640,7 @@ h1 {
 @media (max-width: 720px) {
   .page-shell { width: min(100% - 32px, 560px); }
   .site-header { min-height: 68px; }
+  .confirm-button { width: 100%; }
   .header-note { font-size: 9px; }
   .intro { padding: 38px 0 24px; }
   h1 { font-size: 42px; }
@@ -659,6 +661,7 @@ h1 {
   .session-surface { padding: 11px; }
   .confirmation-heading { font-size: 32px; }
   .confirmation-summary { gap: 12px; }
+  .confirm-button { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

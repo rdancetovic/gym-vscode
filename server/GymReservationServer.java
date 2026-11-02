@@ -27,6 +27,7 @@ public final class GymReservationServer {
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
         requestExecutor = Executors.newSingleThreadExecutor();
         server.setExecutor(requestExecutor);
+        server.createContext("/classes", new ClassesApiHandler(stateStore));
         server.createContext("/reservations", new ReservationApiHandler(
                 stateStore, new GymReservationDomain(), new ReservationCodeGenerator()));
         server.createContext("/", exchange -> serveFrontend(exchange, webRoot));

@@ -336,3 +336,40 @@ Record significant AI prompts used during project development and the resulting 
 **Scope clarification:** The request included cancellation, which is API-07, while also prohibiting API-04 and later. The user selected “API-03 only — implement POST /reservations; defer classes, lookup, and cancellation endpoints.”
 
 **Result:** Implemented and tested `POST /reservations` only. Later endpoints and UI integration remain deferred; no task statuses changed.
+
+## 11. Implement API-04 `GET /classes`
+
+**Purpose:** Implement the read-only classes catalogue endpoint and automated HTTP coverage.
+
+**Prompt (actual user request):**
+
+> Implement API-04 only: GET /classes.
+>
+> Follow the exact acceptance criteria in TASKS.md and the response contract in REQUIREMENTS.md Section 5.1.
+>
+> Requirements:
+>
+> 1. Implement GET /classes using the existing Java 21 HTTP server.
+> 2. Return HTTP 200 with a JSON array containing all four classes and their three sessions each.
+> 3. Use the exact catalogue names, prices, session IDs, days, times and field names/types defined in REQUIREMENTS.md Sections 3 and 5.1.
+> 4. Capacity must be 10.
+> 5. remainingPlaces must reflect the current availability from the API-02 persisted state, including changes made by API-03 reservations and cancellations.
+> 6. GET /classes must never modify in-memory or file-backed state.
+> 7. Follow the existing project architecture and JSON serialization conventions.
+> 8. Add automated HTTP tests covering all API-04 acceptance criteria, including persisted availability and non-mutation of state.
+> 9. Test HTTP method/path behavior according to existing server conventions.
+> 10. Do not modify frontend files.
+> 11. Do not implement API-05 or later tasks.
+> 12. Do not change task statuses, AI Review findings or Human Review records.
+>
+> After implementation:
+>
+> - List modified and created files.
+> - Show an example GET /classes response.
+> - Provide exact PowerShell commands to compile and run tests.
+> - Report actual test results.
+> - Identify any API-04 acceptance criteria not implemented.
+>
+> Do not claim completion if any acceptance criterion remains unmet.
+
+**Result:** Added and registered `ClassesApiHandler`, which returns catalogue values and availability from the loaded state store without saving or modifying state. Added `ClassesApiHandlerTest` for the complete response, persisted availability, non-mutation, and method/path behavior. The final Java run passed 58 API-01, 21 API-02, 51 API-03, and 250 API-04 assertions. No frontend or task-status/review changes were made.

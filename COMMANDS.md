@@ -71,3 +71,17 @@ $buildDir = Join-Path $env:TEMP 'gym-vscode-api03-doc-check'; New-Item -ItemType
 ```
 
 Observed output: API-01 **58 assertions passed**, API-02 **21 assertions passed**, and API-03 **51 assertions passed**.
+
+## API-04 Java verification
+
+```powershell
+$buildDir = Join-Path $env:TEMP 'gym-vscode-api04-build'; New-Item -ItemType Directory -Force -Path $buildDir | Out-Null; javac -d $buildDir server\*.java tests\java\*.java; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $testClasses = @('GymReservationDomainTest', 'ReservationStateStoreTest', 'ReservationApiHandlerTest', 'ClassesApiHandlerTest'); foreach ($testClass in $testClasses) { java -cp $buildDir $testClass; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
+```
+
+Compiled all Java server and test sources, then ran the API-01, API-02, API-03, and API-04 test mains. Final observed results: **58, 21, 51, and 250 assertions passed**, respectively. The initial API-04 test run failed because the new test fixture expected an initial availability value for capacity; the test was corrected and the final full run passed.
+
+```powershell
+git diff --check; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git status --short
+```
+
+Checked whitespace and listed changed files after API-04 implementation.

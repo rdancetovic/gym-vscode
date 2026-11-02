@@ -1,6 +1,6 @@
 # Gym Reservation API Extension — Implementation Plan
 
-**Status:** Proposed. API-01, API-02, and API-03 reservation creation work has been authorized and performed; all task statuses remain Proposed until the user approves status changes.
+**Status:** Proposed. API-01 through API-04 work has been authorized and performed; all task statuses remain Proposed until the user approves status changes.
 
 ## Sources and current project
 
@@ -79,7 +79,9 @@ Phase 0 approvals for backend/runtime, storage format/location, code generation,
 
 ### Implementation progress
 
-`POST /reservations` has been implemented and covered by handler-level Java tests as API-03. It creates a Confirmed reservation, generates a unique six-digit code, deducts current availability, and persists before returning success. The endpoint tests cover successful response fields, request errors and precedence, no-change behavior on failures, code collisions, and code-space exhaustion. `GET /classes`, reservation lookup, and cancellation remain unimplemented.
+`POST /reservations` has been implemented and covered by handler-level Java tests as API-03. It creates a Confirmed reservation, generates a unique six-digit code, deducts current availability, and persists before returning success. The endpoint tests cover successful response fields, request errors and precedence, no-change behavior on failures, code collisions, and code-space exhaustion.
+
+API-04 `GET /classes` is also implemented. It uses the existing catalogue and reads current availability from the file-backed state store without changing state. Its HTTP tests cover the full response contract, initial and persisted availability using confirmed/cancelled state fixtures, state/file non-mutation, and method/path behavior. Latest Java test run passed API-01/02/03/04 with 58/21/51/250 assertions. Reservation lookup and cancellation remain unimplemented.
 
 ### Work
 

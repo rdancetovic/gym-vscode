@@ -42,3 +42,11 @@ This file summarizes relevant conversation decisions for the Gym Reservation API
 - Java tests verified API-01 (58 assertions), API-02 (21 assertions), and API-03 create endpoint behavior (51 assertions); these Java suites were rerun and passed during the documentation update. The 112 browser tests passed after API-02 but were not rerun after API-03 because frontend files were unchanged.
 - API-03 tests exercise successful creation and all Reservation response fields, availability deduction and persistence, malformed/missing/invalid request values, unknown/full sessions, error precedence, non-POST and non-exact paths, collision avoidance, code-space exhaustion, and no state change on validation or persistence failures.
 - Task statuses were not changed and remain Proposed.
+
+## API-04 implementation
+
+- The user authorized API-04 only: implement `GET /classes` against the approved Section 5.1 contract, add HTTP tests, preserve frontend files, and leave task/review records unchanged.
+- Added `ClassesApiHandler` and registered `/classes` in `GymReservationServer`. The handler serializes the existing catalogue and reads `remainingPlaces` from the loaded `ReservationStateStore`; it does not save or otherwise mutate state.
+- Added `ClassesApiHandlerTest` for all four classes and twelve sessions, exact fields/types and catalogue data, capacity 10, initial availability, persisted confirmed/cancelled state fixtures, response status/content type, in-memory and file non-mutation, and method/path behavior. The API-04 tests use saved state fixtures rather than making API-03 or API-07 requests.
+- The final Java run passed 58 API-01, 21 API-02, 51 API-03, and 250 API-04 assertions. An initial API-04 test run exposed an incorrect expected-capacity value in the new test fixture; that fixture was corrected and the complete Java run passed afterward.
+- `git diff --check` passed. No frontend or documentation files were changed during API-04 implementation. Task statuses and review fields remain unchanged and Proposed/Pending.

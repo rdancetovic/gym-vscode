@@ -48,7 +48,7 @@ public final class ReservationApiHandlerTest {
             equal("application/json; charset=utf-8", first.headers().firstValue("Content-Type").orElse(null),
                     "successful create content type");
             Map<String, Object> firstJson = jsonObject(first.body());
-            equal(Map.of(
+            assertReservationFields(Map.of(
                     "code", "GYM-000123",
                     "className", "Yoga",
                     "sessionId", "YOGA-2",
@@ -67,6 +67,16 @@ public final class ReservationApiHandlerTest {
             HttpResponse<String> second = api.post("{\"sessionId\":\"YOGA-2\",\"participants\":1}");
             equal(201, second.statusCode(), "second valid booking status");
             Map<String, Object> secondJson = jsonObject(second.body());
+            assertReservationFields(Map.of(
+                    "code", "GYM-000124",
+                    "className", "Yoga",
+                    "sessionId", "YOGA-2",
+                    "day", "Wednesday",
+                    "time", "19:00",
+                    "participants", new BigDecimal("1"),
+                    "pricePerParticipant", new BigDecimal("8"),
+                    "totalPrice", new BigDecimal("8"),
+                    "status", "Confirmed"), secondJson, "second complete reservation response fields");
             equal("GYM-000124", secondJson.get("code"), "collision advances to an unused code");
             equal(false, firstJson.get("code").equals(secondJson.get("code")), "codes are unique");
             equal(3, store.currentState().availability().get("YOGA-2"),
@@ -149,6 +159,28 @@ public final class ReservationApiHandlerTest {
             HttpResponse<String> second = api.post("{\"sessionId\":\"YOGA-2\",\"participants\":1}");
             equal(201, first.statusCode(), "code-space first reservation");
             equal(201, second.statusCode(), "code-space second reservation");
+            assertReservationFields(Map.of(
+                    "code", "GYM-000000",
+                    "className", "Yoga",
+                    "sessionId", "YOGA-2",
+                    "day", "Wednesday",
+                    "time", "19:00",
+                    "participants", new BigDecimal("1"),
+                    "pricePerParticipant", new BigDecimal("8"),
+                    "totalPrice", new BigDecimal("8"),
+                    "status", "Confirmed"),
+                    jsonObject(first.body()), "first code-space reservation fields");
+            assertReservationFields(Map.of(
+                    "code", "GYM-000001",
+                    "className", "Yoga",
+                    "sessionId", "YOGA-2",
+                    "day", "Wednesday",
+                    "time", "19:00",
+                    "participants", new BigDecimal("1"),
+                    "pricePerParticipant", new BigDecimal("8"),
+                    "totalPrice", new BigDecimal("8"),
+                    "status", "Confirmed"),
+                    jsonObject(second.body()), "second code-space reservation fields");
             ReservationStateStore.ApplicationState fullState = store.currentState();
             assertError(api.post("{\"sessionId\":\"YOGA-2\",\"participants\":1}"),
                     503, "reservation code space exhausted", "code-space exhaustion");
@@ -212,7 +244,7 @@ public final class ReservationApiHandlerTest {
         assertStatus(response, 200, description + " status");
         equal("application/json; charset=utf-8",
                 response.headers().firstValue("Content-Type").orElse(null), description + " content type");
-        equal(Map.of(
+        assertReservationFields(Map.of(
                 "code", reservation.code(),
                 "className", reservation.className(),
                 "sessionId", reservation.sessionId(),
@@ -316,7 +348,7 @@ public final class ReservationApiHandlerTest {
         assertStatus(response, status, description + " status");
         equal("application/json; charset=utf-8",
                 response.headers().firstValue("Content-Type").orElse(null), description + " content type");
-        equal(Map.of(
+        assertReservationFields(Map.of(
                 "code", reservation.code(),
                 "className", reservation.className(),
                 "sessionId", reservation.sessionId(),
@@ -327,6 +359,20 @@ public final class ReservationApiHandlerTest {
                 "totalPrice", BigDecimal.valueOf(reservation.totalPrice()),
                 "status", reservation.status().jsonValue()),
                 jsonObject(response.body()), description + " complete Reservation fields");
+    }
+
+    private static void assertReservationFields(
+            Map<String, Object> expectedFields,
+            Map<String, Object> actualResponse,
+            String description) {
+        for (Map.Entry<String, Object> expectedField : expectedFields.entrySet()) {
+            String fieldName = expectedField.getKey();
+            if (!actualResponse.containsKey(fieldName)) {
+                throw new AssertionError(description + ": required field is missing: " + fieldName);
+            }
+            equal(expectedField.getValue(), actualResponse.get(fieldName),
+                    description + " required field " + fieldName);
+        }
     }
 
     private static ReservationStateStore loadStore(Path dataFile) throws IOException {

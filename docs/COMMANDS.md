@@ -127,3 +127,17 @@ git diff --check; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git status --
 ```
 
 Checked whitespace and reviewed the API-07 source/test diff.
+
+## API-08 Java verification
+
+```powershell
+$buildDir = Join-Path $env:TEMP 'gym-vscode-api08-build'; New-Item -ItemType Directory -Force -Path $buildDir | Out-Null; javac -d $buildDir server\*.java tests\java\*.java; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $testClasses = @('GymReservationDomainTest', 'ReservationStateStoreTest', 'ReservationApiHandlerTest', 'ClassesApiHandlerTest'); foreach ($testClass in $testClasses) { java -cp $buildDir $testClass; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
+```
+
+Compiled all Java server and test sources, then ran all four Java test mains. Final observed results: API-01 **58**, API-02 **21**, combined reservation endpoints (API-03/API-06/API-07) **162**, and API-04 **250** assertions passed.
+
+```powershell
+git diff --check; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git status --short; git diff --stat; git diff -- tests\java\ReservationApiHandlerTest.java
+```
+
+Checked whitespace, worktree status, and the API-08 test diff.

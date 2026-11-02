@@ -74,3 +74,11 @@ This file summarizes relevant conversation decisions for the Gym Reservation API
 - Extended `ReservationApiHandlerTest` with success and persistence checks, cancelled-reservation lookup, malformed/unknown/repeat-cancel errors, and active/file state integrity assertions. The existing POST and GET tests remain.
 - Current Java run passed 58 API-01 assertions, 21 API-02 assertions, 95 combined reservation-endpoint assertions, and 250 API-04 assertions. `git diff --check` passed.
 - No frontend files or task statuses/review records were changed. API-07 remains Proposed; API-08 and later work has not been implemented.
+
+## API-08 error-contract verification
+
+- The user authorized API-08 only: verify documented reservation endpoint error behavior, validation precedence, failed-operation state integrity, and success-response compatibility with additional JSON fields.
+- The audit found the reservation success tests required exact JSON map equality, incorrectly rejecting permitted additional fields. Updated their shared assertions to require the documented Reservation fields and values while accepting extra fields. This applies to POST success and GET/DELETE Reservation responses.
+- Existing HTTP tests already covered documented 400/404/409 cases and readable messages, validation precedence, failed-operation memory/file state integrity, and the separate implementation-specific persistence (500) and code-exhaustion (503) errors. No application source changes or additional error tests were needed.
+- Compiled all Java server/test sources and ran all Java suites: API-01 **58**, API-02 **21**, combined reservation endpoints **162**, and API-04 **250** assertions passed. `git diff --check` passed.
+- Only `tests/java/ReservationApiHandlerTest.java` was changed for the API-08 test correction; frontend files were not changed. Task statuses and review fields remain unchanged.

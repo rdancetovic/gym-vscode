@@ -33,8 +33,12 @@ public final class ReservationApiHandler implements HttpHandler {
             handleLookup(exchange);
             return;
         }
+        if ("DELETE".equals(method)) {
+            handleCancellation(exchange);
+            return;
+        }
         if (!"POST".equals(method)) {
-            exchange.getResponseHeaders().set("Allow", "GET, POST");
+            exchange.getResponseHeaders().set("Allow", "GET, POST, DELETE");
             sendError(exchange, 405, "method not allowed");
             return;
         }
@@ -128,28 +132,92 @@ public final class ReservationApiHandler implements HttpHandler {
     }
 
     private void handleLookup(HttpExchange exchange) throws IOException {
-        String requestPath = exchange.getRequestURI().getPath();
-        String prefix = "/reservations/";
-        if (!requestPath.startsWith(prefix) || requestPath.indexOf('/', prefix.length()) >= 0) {
-            sendError(exchange, 404, "not found");
+        String code = reservationCode(exchange);
+        if (code == null) {
             return;
         }
 
-        String code = requestPath.substring(prefix.length());
-        if (!RESERVATION_CODE_PATTERN.matcher(code).matches()) {
-            sendError(exchange, 400, "invalid reservation code");
-            return;
-        }
-
-        ReservationStateStore.Reservation reservation = stateStore.currentState().reservations().stream()
-                .filter(candidate -> candidate.code().equals(code))
-                .findFirst()
-                .orElse(null);
+        ReservationStateStore.Reservation reservation = findReservation(code);
         if (reservation == null) {
             sendError(exchange, 404, "reservation not found");
             return;
         }
         sendJson(exchange, 200, reservationJson(reservation));
+    }
+
+    private void handleCancellation(HttpExchange exchange) throws IOException {
+        String code = reservationCode(exchange);
+        if (code == null) {
+            return;
+        }
+
+        ReservationStateStore.ApplicationState currentState = stateStore.currentState();
+        List<ReservationStateStore.Reservation> reservations =
+                new ArrayList<>(currentState.reservations());
+        int reservationIndex = -1;
+        for (int index = 0; index < reservations.size(); index++) {
+            if (reservations.get(index).code().equals(code)) {
+                reservationIndex = index;
+                break;
+            }
+        }
+        if (reservationIndex < 0) {
+            sendError(exchange, 404, "reservation not found");
+            return;
+        }
+
+        ReservationStateStore.Reservation reservation = reservations.get(reservationIndex);
+        if (reservation.status() == ReservationStateStore.Status.CANCELLED) {
+            sendError(exchange, 409, "reservation already cancelled");
+            return;
+        }
+
+        ReservationStateStore.Reservation cancelledReservation = new ReservationStateStore.Reservation(
+                reservation.code(),
+                reservation.className(),
+                reservation.sessionId(),
+                reservation.day(),
+                reservation.time(),
+                reservation.participants(),
+                reservation.pricePerParticipant(),
+                reservation.totalPrice(),
+                ReservationStateStore.Status.CANCELLED);
+        reservations.set(reservationIndex, cancelledReservation);
+        Map<String, Integer> availability = new LinkedHashMap<>(currentState.availability());
+        availability.compute(reservation.sessionId(),
+                (ignored, remaining) -> Math.addExact(remaining, reservation.participants()));
+        ReservationStateStore.ApplicationState nextState =
+                new ReservationStateStore.ApplicationState(availability, reservations);
+        try {
+            stateStore.save(nextState);
+        } catch (IOException exception) {
+            sendError(exchange, 500, "reservation could not be saved");
+            return;
+        }
+        sendJson(exchange, 200, reservationJson(cancelledReservation));
+    }
+
+    private String reservationCode(HttpExchange exchange) throws IOException {
+        String requestPath = exchange.getRequestURI().getPath();
+        String prefix = "/reservations/";
+        if (!requestPath.startsWith(prefix) || requestPath.indexOf('/', prefix.length()) >= 0) {
+            sendError(exchange, 404, "not found");
+            return null;
+        }
+
+        String code = requestPath.substring(prefix.length());
+        if (!RESERVATION_CODE_PATTERN.matcher(code).matches()) {
+            sendError(exchange, 400, "invalid reservation code");
+            return null;
+        }
+        return code;
+    }
+
+    private ReservationStateStore.Reservation findReservation(String code) {
+        return stateStore.currentState().reservations().stream()
+                .filter(candidate -> candidate.code().equals(code))
+                .findFirst()
+                .orElse(null);
     }
 
     private static Map<String, Object> object(Object value) {

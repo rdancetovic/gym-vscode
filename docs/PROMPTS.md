@@ -373,3 +373,62 @@ Record significant AI prompts used during project development and the resulting 
 > Do not claim completion if any acceptance criterion remains unmet.
 
 **Result:** Added and registered `ClassesApiHandler`, which returns catalogue values and availability from the loaded state store without saving or modifying state. Added `ClassesApiHandlerTest` for the complete response, persisted availability, non-mutation, and method/path behavior. The final Java run passed 58 API-01, 21 API-02, 51 API-03, and 250 API-04 assertions. No frontend or task-status/review changes were made.
+
+## 12. Implement API-06 reservation lookup
+
+**Purpose:** Add reservation lookup to the existing reservation route and test its contract without changing frontend code or task/review records.
+
+**Prompt (actual user request):**
+
+> Implement API-06 only: GET /reservations/{code}.
+>
+> Follow the API-06 acceptance criteria in TASKS.md and the exact contract in REQUIREMENTS.md.
+>
+> Implementation requirements:
+>
+> 1. Extend the existing ReservationApiHandler.java. Do not create a separate handler or duplicate the existing /reservations route.
+> 2. Support both:
+>
+> - POST /reservations — preserve existing API-03 behavior.
+> - GET /reservations/{code} — implement reservation lookup.
+>
+> 3. For an existing reservation, return HTTP 200 with all required fields:
+> code, className, sessionId, day, time, participants, pricePerParticipant, totalPrice, status.
+> 4. Support both Confirmed and Cancelled reservations.
+> 5. Validate the code strictly: GYM- followed by exactly six digits.
+> 6. Return HTTP 400 with message "invalid reservation code" for malformed codes.
+> 7. Return HTTP 404 with message "reservation not found" for correctly formatted but unknown codes.
+> 8. Lookup must be read-only. Do not modify in-memory state, persisted reservations, or availability.
+> 9. Reuse existing state-store, JSON serialization, and error-response functionality.
+> 10. Preserve existing POST behavior and all API-03 tests.
+> 11. Add HTTP tests for all API-06 acceptance criteria, including read-only verification for successful and failed lookups.
+> 12. Test unsupported methods and path behavior according to existing server conventions.
+> 13. Do not modify frontend files.
+> 14. Do not implement API-07 or later tasks.
+> 15. Do not change task statuses, AI Review findings, or Human Review records.
+>
+> After implementation:
+>
+> - List modified and created files.
+> - Show example successful and error responses.
+> - Provide exact PowerShell commands to compile and run all Java tests.
+> - Report actual test results.
+> - Identify any API-06 criteria not implemented.
+>
+> Do not claim completion unless every API-06 acceptance criterion is satisfied.
+
+**Result:** Extended `ReservationApiHandler` to dispatch GET lookups alongside POST and added lookup cases to `ReservationApiHandlerTest`. The final Java run passed 58 API-01, 21 API-02, 74 combined reservation-endpoint, and 250 API-04 assertions. No frontend or task/review changes were made.
+
+## 13. Implement API-07 cancellation
+
+**Purpose:** Add cancellation to the existing reservation handler, preserve POST and GET behavior, and test persistence and state integrity.
+
+**Prompt (actual user request):**
+
+> Implement API-07 only: DELETE /reservations/{code}.
+>
+> Follow the API-07 acceptance criteria in TASKS.md and the exact contract in REQUIREMENTS.md.
+>
+> Extend the existing ReservationApiHandler.java without creating a separate handler or route. Preserve POST and GET. For a Confirmed reservation, set status Cancelled, restore all participants to availability, persist both changes, and return HTTP 200 with all required Reservation fields. Return 400 for malformed codes, 404 for well-formed unknown codes, and 409 for already Cancelled reservations, with the specified messages. Failed operations must not modify state; failed persistence must not report success or change in-memory state. Keep cancelled reservations available for GET. Reuse existing state-store, validation, serialization, and error functionality; add HTTP tests and rerun all Java tests. Do not modify frontend files, implement API-08 or later, or change task statuses/review records.
+
+**Result:** Added DELETE dispatch to `ReservationApiHandler` and cancellation/persistence/error-integrity tests to `ReservationApiHandlerTest`. The final Java run passed 58 API-01, 21 API-02, 95 combined reservation-endpoint, and 250 API-04 assertions. No frontend or task/review changes were made.

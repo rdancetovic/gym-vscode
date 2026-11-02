@@ -99,3 +99,31 @@ git status --short; git diff --check; if ($LASTEXITCODE -ne 0) { exit $LASTEXITC
 ```
 
 Checked the worktree and whitespace after API-05 verification; no worktree changes were present at that point.
+
+## API-06 Java verification
+
+```powershell
+$buildDir = Join-Path $env:TEMP 'gym-vscode-api06-build'; New-Item -ItemType Directory -Force -Path $buildDir | Out-Null; javac -d $buildDir server\*.java tests\java\*.java; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $testClasses = @('GymReservationDomainTest', 'ReservationStateStoreTest', 'ReservationApiHandlerTest', 'ClassesApiHandlerTest'); foreach ($testClass in $testClasses) { java -cp $buildDir $testClass; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
+```
+
+Compiled all Java server and test sources, then ran the API-01, API-02, combined reservation endpoint (API-03/API-06), and API-04 test mains. Observed: **58, 21, 74, and 250 assertions passed**, respectively.
+
+```powershell
+git diff --check; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git status --short; git diff --stat; git diff -- server\ReservationApiHandler.java tests\java\ReservationApiHandlerTest.java
+```
+
+Checked whitespace and reviewed the API-06 source/test diff.
+
+## API-07 Java verification
+
+```powershell
+$buildDir = Join-Path $env:TEMP 'gym-vscode-api07-build'; New-Item -ItemType Directory -Force -Path $buildDir | Out-Null; javac -d $buildDir server\*.java tests\java\*.java; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $testClasses = @('GymReservationDomainTest', 'ReservationStateStoreTest', 'ReservationApiHandlerTest', 'ClassesApiHandlerTest'); foreach ($testClass in $testClasses) { java -cp $buildDir $testClass; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
+```
+
+Compiled all Java server and test sources, then ran the API-01, API-02, combined reservation endpoint (API-03/API-06/API-07), and API-04 test mains. Observed: **58, 21, 95, and 250 assertions passed**, respectively.
+
+```powershell
+git diff --check; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git status --short; git diff --stat; git diff -- server\ReservationApiHandler.java tests\java\ReservationApiHandlerTest.java
+```
+
+Checked whitespace and reviewed the API-07 source/test diff.

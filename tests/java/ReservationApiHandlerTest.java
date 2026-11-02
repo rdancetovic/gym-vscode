@@ -30,6 +30,8 @@ public final class ReservationApiHandlerTest {
             verifiesPersistenceFailureDoesNotSucceed(testDirectory.resolve("write-failure"));
             verifiesCodeExhaustion(testDirectory.resolve("exhaustion"));
             verifiesReservationLookup(testDirectory.resolve("lookup"));
+            verifiesReservationCancellation(testDirectory.resolve("cancellation"));
+            verifiesCancellationPersistenceFailure(testDirectory.resolve("cancellation-write-failure"));
         } finally {
             deleteTree(testDirectory);
         }
@@ -105,7 +107,7 @@ public final class ReservationApiHandlerTest {
             assertStatus(api.send("GET", "/reservations", null), 404, "missing reservation code path");
             HttpResponse<String> unsupportedMethod = api.send("PATCH", "/reservations/GYM-000123", null);
             assertStatus(unsupportedMethod, 405, "unsupported method");
-            equal("GET, POST", unsupportedMethod.headers().firstValue("Allow").orElse(null),
+            equal("GET, POST, DELETE", unsupportedMethod.headers().firstValue("Allow").orElse(null),
                     "unsupported method Allow header");
             assertStatus(api.send("POST", "/reservations/extra",
                     "{\"sessionId\":\"YOGA-2\",\"participants\":1}"), 404, "non-exact endpoint path");
@@ -208,6 +210,110 @@ public final class ReservationApiHandlerTest {
                 ReservationStateStore.Reservation reservation,
                 String description) throws IOException {
         assertStatus(response, 200, description + " status");
+        equal("application/json; charset=utf-8",
+                response.headers().firstValue("Content-Type").orElse(null), description + " content type");
+        equal(Map.of(
+                "code", reservation.code(),
+                "className", reservation.className(),
+                "sessionId", reservation.sessionId(),
+                "day", reservation.day(),
+                "time", reservation.time(),
+                "participants", BigDecimal.valueOf(reservation.participants()),
+                "pricePerParticipant", BigDecimal.valueOf(reservation.pricePerParticipant()),
+                "totalPrice", BigDecimal.valueOf(reservation.totalPrice()),
+                "status", reservation.status().jsonValue()),
+                jsonObject(response.body()), description + " complete Reservation fields");
+    }
+
+    private static void verifiesReservationCancellation(Path directory) throws Exception {
+        Files.createDirectories(directory);
+        Path dataFile = directory.resolve("reservations.json");
+        ReservationStateStore store = loadStore(dataFile);
+        ReservationStateStore.ApplicationState initialState = store.currentState();
+        ReservationStateStore.Reservation confirmed = new ReservationStateStore.Reservation(
+                "GYM-004217", "Yoga", "YOGA-2", "Wednesday", "19:00",
+                2, 8, 16, ReservationStateStore.Status.CONFIRMED);
+        ReservationStateStore.Reservation other = new ReservationStateStore.Reservation(
+                "GYM-008014", "Pilates", "PILATES-1", "Tuesday", "18:00",
+                1, 10, 10, ReservationStateStore.Status.CONFIRMED);
+        Map<String, Integer> availability = new LinkedHashMap<>(initialState.availability());
+        availability.put("YOGA-2", 4);
+        availability.put("PILATES-1", 7);
+        ReservationStateStore.ApplicationState confirmedState =
+                new ReservationStateStore.ApplicationState(availability, List.of(confirmed, other));
+        store.save(confirmedState);
+
+        ReservationStateStore.Reservation cancelled = new ReservationStateStore.Reservation(
+                confirmed.code(), confirmed.className(), confirmed.sessionId(), confirmed.day(),
+                confirmed.time(), confirmed.participants(), confirmed.pricePerParticipant(),
+                confirmed.totalPrice(), ReservationStateStore.Status.CANCELLED);
+        Map<String, Integer> restoredAvailability = new LinkedHashMap<>(availability);
+        restoredAvailability.put("YOGA-2", 6);
+        ReservationStateStore.ApplicationState cancelledState =
+                new ReservationStateStore.ApplicationState(restoredAvailability, List.of(cancelled, other));
+
+        try (RunningApi api = new RunningApi(store, new ReservationCodeGenerator(() -> 0, 1_000_000))) {
+            HttpResponse<String> response = api.send("DELETE", "/reservations/GYM-004217", null);
+            assertLookupResponseWithStatus(response, cancelled, 200, "successful cancellation response");
+            equal(cancelledState, store.currentState(), "cancellation updates active state and restores availability");
+            equal(cancelledState, new ReservationStateStore(dataFile).load(),
+                    "cancellation persists status and restored availability");
+            assertLookupResponse(api.send("GET", "/reservations/GYM-004217", null),
+                    cancelled, "cancelled reservation remains available for lookup");
+
+            String savedJson = Files.readString(dataFile);
+            assertError(api.send("DELETE", "/reservations/GYM-004217", null),
+                    409, "reservation already cancelled", "repeat cancellation");
+            assertError(api.send("DELETE", "/reservations/bad-code", null),
+                    400, "invalid reservation code", "malformed cancellation code");
+            assertError(api.send("DELETE", "/reservations/GYM-999999", null),
+                    404, "reservation not found", "unknown cancellation code");
+            equal(cancelledState, store.currentState(), "failed cancellations do not change active state");
+            equal(savedJson, Files.readString(dataFile), "failed cancellations do not change persisted file");
+        }
+    }
+
+    private static void verifiesCancellationPersistenceFailure(Path directory) throws Exception {
+        Files.createDirectories(directory);
+        Path stateDirectory = directory.resolve("state");
+        Files.createDirectories(stateDirectory);
+        Path stateFile = stateDirectory.resolve("reservations.json");
+        ReservationStateStore store = loadStore(stateFile);
+        ReservationStateStore.ApplicationState initialState = store.currentState();
+        ReservationStateStore.Reservation confirmed = new ReservationStateStore.Reservation(
+                "GYM-004217", "Yoga", "YOGA-2", "Wednesday", "19:00",
+                2, 8, 16, ReservationStateStore.Status.CONFIRMED);
+        Map<String, Integer> availability = new LinkedHashMap<>(initialState.availability());
+        availability.put("YOGA-2", 4);
+        ReservationStateStore.ApplicationState confirmedState =
+                new ReservationStateStore.ApplicationState(availability, List.of(confirmed));
+        store.save(confirmedState);
+        String savedJson = Files.readString(stateFile);
+        Path movedStateDirectory = directory.resolve("saved-state");
+
+        try (RunningApi api = new RunningApi(store, new ReservationCodeGenerator(() -> 0, 1_000_000))) {
+            Files.move(stateDirectory, movedStateDirectory);
+            Files.writeString(stateDirectory, "blocks directory creation");
+            assertError(api.send("DELETE", "/reservations/GYM-004217", null),
+                    500, "reservation could not be saved", "cancellation file write failure");
+            equal(confirmedState, store.currentState(),
+                    "failed cancellation persistence leaves active state unchanged");
+        } finally {
+            Files.deleteIfExists(stateDirectory);
+            Files.move(movedStateDirectory, stateDirectory);
+        }
+        equal(savedJson, Files.readString(stateFile),
+                "failed cancellation persistence leaves saved state unchanged");
+        equal(confirmedState, new ReservationStateStore(stateFile).load(),
+                "failed cancellation persistence leaves restart-restored state unchanged");
+    }
+
+    private static void assertLookupResponseWithStatus(
+            HttpResponse<String> response,
+            ReservationStateStore.Reservation reservation,
+            int status,
+            String description) throws IOException {
+        assertStatus(response, status, description + " status");
         equal("application/json; charset=utf-8",
                 response.headers().firstValue("Content-Type").orElse(null), description + " content type");
         equal(Map.of(

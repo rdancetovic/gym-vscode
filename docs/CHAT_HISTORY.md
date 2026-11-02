@@ -58,3 +58,19 @@ This file summarizes relevant conversation decisions for the Gym Reservation API
 - Recompiled all Java server and test sources and ran the existing Java test mains. Current-session results: API-01 **58 assertions passed**, API-02 **21**, API-03 **51**, and API-04 **250**. `git diff --check` passed.
 - No task status, AI Review finding, or Human Review outcome was changed.
 - The next requested analysis step is API-06.
+
+## API-06 implementation
+
+- The user authorized API-06 only: implement `GET /reservations/{code}` in the existing `ReservationApiHandler`, preserve `POST /reservations`, and leave frontend files and task/review records unchanged.
+- Extended `ReservationApiHandler` to route GET lookup requests, enforce the `GYM-` plus exactly six digits format, return stored Confirmed or Cancelled reservations, and reuse the existing reservation JSON/error serialization. Lookup has no state-store writes.
+- Extended `ReservationApiHandlerTest` for both reservation statuses, malformed and unknown codes, memory and file non-mutation after successful and failed lookups, and method/path handling. The existing POST coverage remains in that test suite.
+- Current Java run passed 58 API-01 assertions, 21 API-02 assertions, 74 combined reservation-endpoint assertions, and 250 API-04 assertions. `git diff --check` passed.
+- No frontend files, task statuses, AI Review findings, or Human Review outcomes were changed.
+
+## API-07 implementation
+
+- The user authorized API-07 only: implement `DELETE /reservations/{code}` in the existing `ReservationApiHandler`, preserve POST and GET, and do not modify frontend files or task/review records.
+- Extended the handler to cancel an existing Confirmed reservation, restore its participant places, persist the changed status and availability before success, retain the record for lookup, and return the full Reservation response. Malformed, unknown, and already-cancelled codes use the specified errors. Persistence failure returns an error without changing the in-memory state.
+- Extended `ReservationApiHandlerTest` with success and persistence checks, cancelled-reservation lookup, malformed/unknown/repeat-cancel errors, and active/file state integrity assertions. The existing POST and GET tests remain.
+- Current Java run passed 58 API-01 assertions, 21 API-02 assertions, 95 combined reservation-endpoint assertions, and 250 API-04 assertions. `git diff --check` passed.
+- No frontend files or task statuses/review records were changed. API-07 remains Proposed; API-08 and later work has not been implemented.

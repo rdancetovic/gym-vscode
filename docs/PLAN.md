@@ -1,6 +1,6 @@
 # Gym Reservation API Extension — Implementation Plan
 
-**Status:** Proposed. API-01 through API-04 work has been authorized and performed; all task statuses remain Proposed until the user approves status changes.
+**Status:** Proposed. API-01 through API-07 work has been authorized and performed; all task statuses remain Proposed until the user approves status changes.
 
 ## Sources and current project
 
@@ -81,7 +81,13 @@ Phase 0 approvals for backend/runtime, storage format/location, code generation,
 
 `POST /reservations` has been implemented and covered by handler-level Java tests as API-03. It creates a Confirmed reservation, generates a unique six-digit code, deducts current availability, and persists before returning success. The endpoint tests cover successful response fields, request errors and precedence, no-change behavior on failures, code collisions, and code-space exhaustion.
 
-API-04 `GET /classes` is also implemented. It uses the existing catalogue and reads current availability from the file-backed state store without changing state. Its HTTP tests cover the full response contract, initial and persisted availability using confirmed/cancelled state fixtures, state/file non-mutation, and method/path behavior. Latest Java test run passed API-01/02/03/04 with 58/21/51/250 assertions. Reservation lookup and cancellation remain unimplemented.
+API-04 `GET /classes` is also implemented. It uses the existing catalogue and reads current availability from the file-backed state store without changing state. Its HTTP tests cover the full response contract, initial and persisted availability using confirmed/cancelled state fixtures, state/file non-mutation, and method/path behavior.
+
+API-05 verified the existing `POST /reservations` contract against its acceptance criteria; no gaps were identified and no source or test files were changed for that verification.
+
+API-06 `GET /reservations/{code}` is now implemented in the existing reservation handler alongside POST. It validates the exact code format, returns stored Confirmed/Cancelled Reservation fields, and performs no state writes. The reservation HTTP tests cover lookup success and errors, read-only behavior, and method/path handling.
+
+API-07 `DELETE /reservations/{code}` is implemented in that same handler. Confirmed reservations are marked Cancelled, their places are restored, and the changed state is persisted before returning HTTP 200. Tests cover success, persistence, lookup after cancellation, malformed/unknown/repeat-cancel errors, state integrity, and save failure. The latest Java run passed API-01 58, API-02 21, combined reservation-endpoint 95, and API-04 250 assertions. API-08 verification and frontend integration remain.
 
 ### Work
 
@@ -98,8 +104,8 @@ Use the exact JSON field names, types, response fields, and success statuses in 
 
 - `GET /classes` returns all four classes and three sessions each with current availability and HTTP `200`.
 - Valid `POST /reservations` returns HTTP `201` with every required Reservation field and correct values.
-- `GET /reservations/{code}` returns HTTP `200` and the stored reservation with its current status.
-- Successful `DELETE /reservations/{code}` returns HTTP `200`, the updated reservation, and restored availability.
+- `GET /reservations/{code}` returns HTTP `200` and the stored reservation with its current status. (Implemented as API-06; retain as phase acceptance criterion.)
+- Successful `DELETE /reservations/{code}` returns HTTP `200`, the updated reservation, and restored availability. (Implemented as API-07; retain as phase acceptance criterion.)
 - Invalid inputs return `400`; unknown session/reservation returns `404`; insufficient availability and repeat cancellation return `409`.
 - Validation order is verified, including an invalid participant count with an unknown session returning `400`.
 - Responses contain all required fields; additional response fields remain permitted.

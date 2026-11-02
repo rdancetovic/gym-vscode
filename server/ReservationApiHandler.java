@@ -8,8 +8,11 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 public final class ReservationApiHandler implements HttpHandler {
+    private static final Pattern RESERVATION_CODE_PATTERN = Pattern.compile("GYM-[0-9]{6}");
+
     private final ReservationStateStore stateStore;
     private final GymReservationDomain domain;
     private final ReservationCodeGenerator codeGenerator;
@@ -25,8 +28,13 @@ public final class ReservationApiHandler implements HttpHandler {
 
     @Override
     public void handle(HttpExchange exchange) throws IOException {
-        if (!"POST".equals(exchange.getRequestMethod())) {
-            exchange.getResponseHeaders().set("Allow", "POST");
+        String method = exchange.getRequestMethod();
+        if ("GET".equals(method)) {
+            handleLookup(exchange);
+            return;
+        }
+        if (!"POST".equals(method)) {
+            exchange.getResponseHeaders().set("Allow", "GET, POST");
             sendError(exchange, 405, "method not allowed");
             return;
         }
@@ -117,6 +125,31 @@ public final class ReservationApiHandler implements HttpHandler {
             return;
         }
         sendJson(exchange, 201, reservationJson(reservation));
+    }
+
+    private void handleLookup(HttpExchange exchange) throws IOException {
+        String requestPath = exchange.getRequestURI().getPath();
+        String prefix = "/reservations/";
+        if (!requestPath.startsWith(prefix) || requestPath.indexOf('/', prefix.length()) >= 0) {
+            sendError(exchange, 404, "not found");
+            return;
+        }
+
+        String code = requestPath.substring(prefix.length());
+        if (!RESERVATION_CODE_PATTERN.matcher(code).matches()) {
+            sendError(exchange, 400, "invalid reservation code");
+            return;
+        }
+
+        ReservationStateStore.Reservation reservation = stateStore.currentState().reservations().stream()
+                .filter(candidate -> candidate.code().equals(code))
+                .findFirst()
+                .orElse(null);
+        if (reservation == null) {
+            sendError(exchange, 404, "reservation not found");
+            return;
+        }
+        sendJson(exchange, 200, reservationJson(reservation));
     }
 
     private static Map<String, Object> object(Object value) {

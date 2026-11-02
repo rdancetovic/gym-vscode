@@ -29,10 +29,11 @@ public final class ReservationApiHandlerTest {
             verifiesValidationAndFailureIntegrity(testDirectory.resolve("validation"));
             verifiesPersistenceFailureDoesNotSucceed(testDirectory.resolve("write-failure"));
             verifiesCodeExhaustion(testDirectory.resolve("exhaustion"));
+            verifiesReservationLookup(testDirectory.resolve("lookup"));
         } finally {
             deleteTree(testDirectory);
         }
-        System.out.println("Passed " + assertions + " API-03 endpoint assertions.");
+        System.out.println("Passed " + assertions + " reservation endpoint assertions.");
     }
 
     private static void verifiesSuccessfulCreationAndUniqueCodes(Path directory) throws Exception {
@@ -101,8 +102,11 @@ public final class ReservationApiHandlerTest {
             assertError(api.post("{\"sessionId\":\"YOGA-2\",\"participants\":7}"),
                     409, "not enough places available", "participants exceed availability");
             assertError(api.post("{broken"), 400, "invalid JSON request body", "malformed JSON");
-            assertError(api.send("GET", "/reservations", null),
-                    405, "method not allowed", "unsupported method");
+            assertStatus(api.send("GET", "/reservations", null), 404, "missing reservation code path");
+            HttpResponse<String> unsupportedMethod = api.send("PATCH", "/reservations/GYM-000123", null);
+            assertStatus(unsupportedMethod, 405, "unsupported method");
+            equal("GET, POST", unsupportedMethod.headers().firstValue("Allow").orElse(null),
+                    "unsupported method Allow header");
             assertStatus(api.send("POST", "/reservations/extra",
                     "{\"sessionId\":\"YOGA-2\",\"participants\":1}"), 404, "non-exact endpoint path");
             equal(baseline, store.currentState(), "invalid requests do not change in-memory state");
@@ -150,6 +154,73 @@ public final class ReservationApiHandlerTest {
             equal(fullState, new ReservationStateStore(directory.resolve("reservations.json")).load(),
                     "code exhaustion does not change stored state");
         }
+    }
+
+    private static void verifiesReservationLookup(Path directory) throws Exception {
+        Files.createDirectories(directory);
+        Path dataFile = directory.resolve("reservations.json");
+        ReservationStateStore store = loadStore(dataFile);
+        ReservationStateStore.ApplicationState initialState = store.currentState();
+        ReservationStateStore.Reservation confirmed = new ReservationStateStore.Reservation(
+                "GYM-004217", "Yoga", "YOGA-2", "Wednesday", "19:00",
+                2, 8, 16, ReservationStateStore.Status.CONFIRMED);
+        ReservationStateStore.Reservation cancelled = new ReservationStateStore.Reservation(
+                "GYM-008014", "Pilates", "PILATES-1", "Tuesday", "18:00",
+                1, 10, 10, ReservationStateStore.Status.CANCELLED);
+        Map<String, Integer> availability = new LinkedHashMap<>(initialState.availability());
+        availability.put("YOGA-2", 4);
+        ReservationStateStore.ApplicationState lookupState =
+                new ReservationStateStore.ApplicationState(availability, List.of(confirmed, cancelled));
+        store.save(lookupState);
+        String persistedJson = Files.readString(dataFile);
+
+        try (RunningApi api = new RunningApi(store, new ReservationCodeGenerator(() -> 0, 1_000_000))) {
+            assertLookupResponse(api.send("GET", "/reservations/GYM-004217", null),
+                    confirmed, "confirmed reservation lookup");
+            assertLookupResponse(api.send("GET", "/reservations/GYM-008014", null),
+                    cancelled, "cancelled reservation lookup");
+
+            assertError(api.send("GET", "/reservations/ABC-004217", null),
+                    400, "invalid reservation code", "wrong code prefix");
+            assertError(api.send("GET", "/reservations/GYM-04217", null),
+                    400, "invalid reservation code", "too few code digits");
+            assertError(api.send("GET", "/reservations/GYM-0004217", null),
+                    400, "invalid reservation code", "too many code digits");
+            assertError(api.send("GET", "/reservations/GYM-00A217", null),
+                    400, "invalid reservation code", "nondigit code");
+            assertError(api.send("GET", "/reservations/", null),
+                    400, "invalid reservation code", "empty code segment");
+            assertError(api.send("GET", "/reservations/GYM-999999", null),
+                    404, "reservation not found", "unknown well-formed code");
+            assertStatus(api.send("GET", "/reservations/GYM-004217/extra", null),
+                    404, "extra lookup path segment");
+
+            equal(lookupState, store.currentState(), "successful and failed lookups do not change memory state");
+            equal(persistedJson, Files.readString(dataFile),
+                    "successful and failed lookups do not change persisted file");
+            equal(lookupState, new ReservationStateStore(dataFile).load(),
+                    "lookups leave restart-restored state unchanged");
+        }
+    }
+
+    private static void assertLookupResponse(
+                HttpResponse<String> response,
+                ReservationStateStore.Reservation reservation,
+                String description) throws IOException {
+        assertStatus(response, 200, description + " status");
+        equal("application/json; charset=utf-8",
+                response.headers().firstValue("Content-Type").orElse(null), description + " content type");
+        equal(Map.of(
+                "code", reservation.code(),
+                "className", reservation.className(),
+                "sessionId", reservation.sessionId(),
+                "day", reservation.day(),
+                "time", reservation.time(),
+                "participants", BigDecimal.valueOf(reservation.participants()),
+                "pricePerParticipant", BigDecimal.valueOf(reservation.pricePerParticipant()),
+                "totalPrice", BigDecimal.valueOf(reservation.totalPrice()),
+                "status", reservation.status().jsonValue()),
+                jsonObject(response.body()), description + " complete Reservation fields");
     }
 
     private static ReservationStateStore loadStore(Path dataFile) throws IOException {

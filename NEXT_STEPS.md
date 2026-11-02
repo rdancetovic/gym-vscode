@@ -3,32 +3,31 @@
 ## Current status
 
 - The extension requirements have been reviewed and approved by the user.
-- Documentation and implementation planning are prepared as Proposed deliverables.
-- No application functionality has been implemented.
+- Documentation and implementation planning remain Proposed deliverables.
+- The Java 21 HTTP server and API-01 domain layer are implemented. API-02 file-backed state loads on startup and persists JSON state at `data/reservations.json`.
+- No REST API endpoints, reservation creation/cancellation operations, or frontend/API integration have been implemented.
 - All tasks in `TASKS.md` remain Proposed; task status changes require explicit user approval.
-- The existing `TEST_PLAN.md` documents the original in-memory application and reports 112 browser tests. The suite was not rerun during this preparation.
+- The 112 existing browser tests passed when run through the Java server after API-02 changes. Java API-01 tests passed 58 assertions; API-02 persistence tests passed 21 assertions.
 - Java 21 is available. Node/npm are not found. The Python command is a Windows Store alias and fails to locate Python. Maven/Gradle commands and a backend build manifest were not found.
 
-## Remaining preparation
+## Remaining work
 
-1. Review `PLAN.md`, `TASKS.md`, `TEST_PLAN.md`, `AGENTS.md`, `PROMPTS.md`, `CHAT_HISTORY.md`, `COMMANDS.md`, and this file.
-2. Approve or defer task statuses explicitly; no status will change without approval.
-3. Decide or defer the technical decisions listed below before implementation depends on them.
-4. Run the existing browser suite as a baseline using the approved test approach and record the actual result.
+1. Review this implementation increment and the updated supporting documentation.
+2. Keep task statuses Proposed unless the user explicitly approves a status change.
+3. Resolve the remaining decisions below before dependent work begins.
+4. Proceed with API-03 only when separately authorized.
 
 ## Open technical decisions
 
-- Backend language/framework and how it will be launched.
-- API address/port and frontend-to-API serving/connection strategy.
-- File format, data-file location, and organization.
 - Reservation-code generation strategy and exhaustion behavior for the six-digit code space.
-- Status/UI handling for file read/write failures, which the BRDs do not prescribe.
-- Browser/API test tooling and how automated checks will be run.
+- Error-response JSON shape.
+- HTTP/UI behavior for file read/write failures; storage errors are surfaced and do not update active state.
+- API contract and browser/API integration test tooling.
 
 ## Proposed implementation phases
 
-1. **Approvals and baseline:** resolve decisions or defer them, run and record the existing suite, identify superseded tests.
-2. **Server domain and persistence:** catalogue, reservation/cancellation rules, unique codes, file storage, restart behavior.
+1. **Approvals and baseline:** baseline browser suite recorded as 112 passed; confirm any remaining implementation choices.
+2. **Server domain and persistence:** API-01 catalogue/domain and API-02 file-state groundwork are implemented; reservation creation, cancellation, and endpoint behavior remain for later authorized tasks.
 3. **REST API:** implement and test the four endpoints, exact contracts, statuses, validation order, readable errors, and no-change behavior on failures.
 4. **Reservation UI integration:** load catalogue/availability from API, submit confirmations, show API results and failure feedback.
 5. **Lookup and cancellation UI:** search by code, display reservation details/status, cancel whole reservation and show result.
@@ -38,7 +37,7 @@ See `PLAN.md` for phase-level work and acceptance criteria; see `TASKS.md` for t
 
 ## Immediate next actions
 
-1. Human review of the proposed plan and task breakdown.
-2. Approval or deferral of technical decisions.
-3. User approval for any task-status transitions.
-4. Execute the approved baseline test procedure before implementation begins.
+1. Human review of implementation progress and evidence.
+2. Resolve remaining code-generation, API error, and integration-test decisions.
+3. Obtain separate authorization before starting API-03.
+4. Obtain explicit user approval for any task-status transition.

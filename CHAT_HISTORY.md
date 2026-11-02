@@ -32,3 +32,11 @@ This file summarizes relevant conversation decisions for the Gym Reservation API
 - The app has no package manifest or backend build manifest in the root listing.
 - Java 21 was confirmed available. Node/npm were not found. The `python` command is a Windows Store alias and `python --version` failed. Maven and Gradle commands were not found.
 - No backend technology, API port, storage format/location, code-generation strategy, or API test tooling has been selected.
+
+## Authorized implementation activity
+
+- The user authorized the Java 21 `HttpServer` server on port 3000, same-origin static frontend serving, relative frontend API URLs, and sequential request handling. The server and API-01 catalogue/domain classes were added without implementing reservation endpoints.
+- The user subsequently approved API-02 storage at `data/reservations.json`, initial inventory creation when missing, startup loading, persistence of reservations/statuses/availability, and restart restoration.
+- API-02 added `ReservationStateStore`, integrated startup state loading into the Java server, and configured a single-thread request executor. REST endpoints and reservation operations remain unimplemented.
+- Java tests verified API-01 catalogue/domain behavior (58 assertions) and API-02 initialization, load/save, restart restoration, and explicit storage errors (21 assertions). The 112 browser tests also passed when run from the server.
+- Task statuses were not changed and remain Proposed.

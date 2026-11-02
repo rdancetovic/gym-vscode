@@ -278,3 +278,34 @@ Record significant AI prompts used during project development and the resulting 
 > Complete the documentation preparation in one pass rather than stopping after each file.
 
 **Resulting change:** Created `PLAN.md`, `TASKS.md`, `CHAT_HISTORY.md`, `COMMANDS.md`, and `NEXT_STEPS.md`; updated `TEST_PLAN.md`, `AGENTS.md`, and this prompt record. Marked the already user-approved `REQUIREMENTS.md` status accordingly; no requirement content or application source code was changed. Runtime availability and open technical decisions are documented. No tests were run as part of this preparation.
+
+## 9. Implement API-02 persistence
+
+**Prompt (actual user request):**
+
+> Implement API-02 only: File-backed state.
+>
+> Follow the API-02 acceptance criteria in TASKS.md and REQUIREMENTS.md.
+>
+> Approved design:
+>
+> - Store application state in `data/reservations.json`.
+> - If the file does not exist, initialize it using the initial inventory defined in the BRD.
+> - Load existing state on server startup.
+> - Persist reservations, reservation statuses, and availability.
+> - Restore the saved state after server restart.
+> - Keep request handling sequential to avoid concurrent state modifications.
+>
+> Requirements:
+>
+> 1. Integrate persistence with the existing API-01 Java server and domain classes.
+> 2. Preserve the existing frontend and server behavior.
+> 3. Handle file read/write errors explicitly. Never report a successful operation if persistence fails.
+> 4. Add Java tests for initialization, loading existing state, saving changes, and restoring state.
+> 5. Do not implement API-03 or any later API task.
+> 6. Do not add dependencies or change the approved architecture without asking first.
+> 7. Do not change task statuses in TASKS.md.
+>
+> When finished, report changed files, implementation details, test commands, and actual test results. Provide exact PowerShell commands to compile and run the tests.
+
+**Result:** Added file-backed JSON state loading/saving, startup initialization, and sequential HTTP request execution. Added persistence tests; no API endpoints or task-status changes.

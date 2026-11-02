@@ -1,0 +1,17 @@
+{
+  "availability": {
+    "FUNCTIONAL-1": 5,
+    "FUNCTIONAL-2": 10,
+    "FUNCTIONAL-3": 3,
+    "PILATES-1": 8,
+    "PILATES-2": 4,
+    "PILATES-3": 0,
+    "SPINNING-1": 7,
+    "SPINNING-2": 1,
+    "SPINNING-3": 10,
+    "YOGA-1": 10,
+    "YOGA-2": 6,
+    "YOGA-3": 2
+  },
+  "reservations": []
+}

@@ -41,3 +41,17 @@ git status --short; git diff --check; git diff --stat
 ```
 
 Final worktree and whitespace check. The reported diff summary covers tracked changes; newly created untracked files appear in `git status`.
+
+## API-02 Java verification
+
+```powershell
+$buildDir = Join-Path $env:TEMP 'gym-vscode-api02-classes'; New-Item -ItemType Directory -Force -Path $buildDir | Out-Null; javac --add-modules jdk.httpserver -d $buildDir server\GymCatalogue.java server\GymReservationDomain.java server\ReservationStateStore.java server\GymReservationServer.java tests\java\GymReservationDomainTest.java tests\java\ReservationStateStoreTest.java; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; java --add-modules jdk.httpserver -cp $buildDir GymReservationDomainTest; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; java --add-modules jdk.httpserver -cp $buildDir ReservationStateStoreTest
+```
+
+Compiled the server and Java tests, then ran the API-01 domain suite (58 assertions) and API-02 persistence suite (21 assertions); both passed.
+
+```powershell
+java --add-modules jdk.httpserver -cp $buildDir GymReservationServer
+```
+
+Started the server to verify initialization of `data/reservations.json` and frontend serving on port 3000. The first attempt found port 3000 occupied by an earlier project test server; that previously launched server was stopped, after which the updated server started and was verified. The API-02 verification server was stopped afterwards.

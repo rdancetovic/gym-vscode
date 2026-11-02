@@ -1,6 +1,6 @@
 # Gym Reservation API Extension — Implementation Plan
 
-**Status:** Proposed. No application implementation has started. Task statuses remain Proposed until the user approves status changes.
+**Status:** Proposed. API-01 and API-02 implementation work has been authorized and performed; the corresponding task statuses remain Proposed until the user approves status changes.
 
 ## Sources and current project
 
@@ -13,7 +13,8 @@ The existing application is a plain HTML/CSS and browser-JavaScript project:
 - `js/reservation.js` implements client-side validation, totals, and in-memory booking deductions.
 - `js/ui.js` implements the reservation selection, summary, confirmation, and accessibility behavior.
 - `tests/tests.html` loads the browser test harness and existing tests.
-- `TEST_PLAN.md` documents 112 existing browser tests and the original in-memory behavior; the documented suite has not been rerun as part of this preparation.
+- `TEST_PLAN.md` documents the original browser suite. The 112 browser tests were run through the Java server after API-02 changes and all passed.
+- Java domain and persistence test mains exist under `tests/java/`; no build system or third-party dependency was added.
 - `AGENTS.md` and `PROMPTS.md` exist. `TASKS.md`, `PLAN.md`, `CHAT_HISTORY.md`, `COMMANDS.md`, and `NEXT_STEPS.md` did not exist before this preparation.
 
 ## Execution rules
@@ -195,10 +196,11 @@ Phases 1–4 and approved test environment.
 
 The BRDs do not prescribe these choices:
 
-1. **Backend technology and launch method.** Java 21 is installed; Node/npm are not found; the Python command resolves to a Windows Store alias and `python --version` fails. No backend has been selected.
-2. **API address/port and connection arrangement.** Endpoint paths are specified, but host, port, same-origin/proxy setup, and frontend configuration are not.
-3. **Storage format, file location, and file organization.** File persistence is required; the format and location are unspecified.
-4. **Reservation-code generation.** The format and uniqueness are mandatory; generation strategy and behavior if the six-digit code space is exhausted are unspecified.
-5. **Persistence failure response.** Defined API failures must make no changes, but the BRDs do not prescribe the status or UI behavior for file read/write failures.
-6. **Test tooling.** Existing tests are browser-based; no Node-based runner is documented, and no Maven/Gradle command or build manifest is present. Backend/API test tooling remains to be approved.
-7. **Browser/API hosting for local demonstration.** The project currently opens as static HTML; the supported manner of serving the frontend alongside the API is unspecified.
+The user approved Java 21 with `com.sun.net.httpserver.HttpServer`, port 3000, same-origin frontend serving, sequential request handling, and file storage at `data/reservations.json`. Java backend/domain/persistence tests use standalone test mains compiled with `javac`; no external dependencies or build system are used.
+
+The following implementation details remain open:
+
+1. **Reservation-code generation.** The format and uniqueness are mandatory; generation strategy, collision handling, and behavior if the six-digit code space is exhausted remain to be decided.
+2. **API error representation.** The BRDs specify readable messages but do not prescribe the JSON error shape.
+3. **Persistence failure API behavior.** Storage exceptions are surfaced and do not replace in-memory state, but the BRDs do not prescribe the HTTP status or UI behavior for persistence failures.
+4. **Later API/UI test approach.** Java domain and persistence tests run without dependencies; the integration strategy for API contract and browser/API checks remains to be selected before those phases.

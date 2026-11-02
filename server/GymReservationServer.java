@@ -6,19 +6,27 @@ import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public final class GymReservationServer {
     private static final int PORT = 3000;
     private static final String HTML_CONTENT_TYPE = "text/html; charset=utf-8";
     private static final String CSS_CONTENT_TYPE = "text/css; charset=utf-8";
     private static final String JAVASCRIPT_CONTENT_TYPE = "text/javascript; charset=utf-8";
+    private static ReservationStateStore stateStore;
+    private static ExecutorService requestExecutor;
 
     private GymReservationServer() {
     }
 
     public static void main(String[] args) throws IOException {
         Path webRoot = Path.of(".").toRealPath();
+        stateStore = new ReservationStateStore(Path.of("data", "reservations.json"));
+        stateStore.load();
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
+        requestExecutor = Executors.newSingleThreadExecutor();
+        server.setExecutor(requestExecutor);
         server.createContext("/", exchange -> serveFrontend(exchange, webRoot));
         server.start();
         System.out.println("Gym Reservation server listening at http://localhost:" + PORT);

@@ -2,14 +2,15 @@
 
 ## Purpose and status
 
-This plan maps the approved `REQUIREMENTS.md` to proposed automated and manual verification. It does not claim that extension tests have been implemented or run.
+This plan maps the approved `REQUIREMENTS.md` to automated and manual verification. API-01 domain tests and API-02 persistence tests have been implemented and run; no REST API endpoints or endpoint tests are implemented yet.
 
-The existing browser suite is loaded from `tests/tests.html`. Previous project documentation reports 112 browser tests for the original in-memory application. That count is historical documentation; the suite was not rerun during this preparation. There is no documented command-line test runner. Backend/API test tooling remains an approval decision.
+The existing browser suite is loaded from `tests/tests.html`. All 112 tests passed when run through the Java server after API-02 changes. The Java domain and persistence suites are standalone test mains compiled with the installed JDK; no third-party test library or build system is used.
 
 ## Test approach
 
 - Run the existing browser suite as a baseline before changing application behavior and record the actual result.
-- Add focused tests for the backend/domain, persistence, API contract, and UI/API integration using the user-approved tooling.
+- Run the Java domain and persistence test mains using the JDK.
+- Add focused tests for the API contract and UI/API integration using an approved approach.
 - Keep regression tests for original requirements not overridden by the extension.
 - Use a temporary or test-owned data file/fixture where the chosen test approach supports it; do not overwrite user data.
 - Verify persistence by stopping and restarting the running application with the same configured data file.
@@ -32,6 +33,7 @@ The existing browser suite is loaded from `tests/tests.html`. Previous project d
 | Validation precedence | Test invalid input before lookup/conflict; unknown session plus participant count 0 returns 400. Test not-found before 409 conflict checks where the contract applies. |
 | Failed-operation integrity | For each defined failing operation, compare reservations and availability before/after; no stored data changes. |
 | File initialization and persistence | With no data file, initialize original availability. After booking, restart and verify record/status/remaining places. Cancel, restart again, verify Cancelled record and restored availability. |
+| API-02 state store | Java tests verify creation of missing `data/reservations.json` state, loading existing state, saving availability/reservation/status changes, restoration through a new store instance, and explicit read/write failures. |
 | Frontend/API integration | Verify catalogue loads from API; valid confirmation submits to API; UI uses server response; starting another reservation shows current server availability; API errors display clear feedback and do not appear as success. |
 | Responsive/accessibility regression | Preserve applicable existing keyboard, focus, live-region, light/dark, reduced-motion, and viewport behavior; run established manual checks where available. |
 | Scope | Verify no accounts, personal data, payment processing, or simultaneous multi-visitor behavior was added. |
@@ -120,8 +122,22 @@ Update old tests/manual expectations that specifically require refresh/reopen to
 
 ## Open testing decisions and limits
 
-- Select backend/API test tooling only after the backend runtime is approved.
-- Decide how the frontend and API are launched together for integrated browser checks; host/port and serving arrangement are not prescribed.
+- Java backend/domain/persistence test invocation is established below. Decide the API contract/integration test approach before endpoint implementation.
+- The frontend and server use the approved same-origin host on port 3000; the server must be launched from the repository root to serve the frontend and use the configured state path.
 - The BRDs specify readable API errors but not the JSON error shape.
 - The BRDs do not prescribe status codes or UI behavior for file read/write failures. Do not assert an unapproved response code for those failures.
-- No baseline or extension test results are asserted in this preparation.
+- The browser suite passed 112/112 tests after API-02 changes. Java test counts are recorded with the actual test execution.
+
+## Java domain and persistence test command
+
+Run from the repository root in PowerShell:
+
+```powershell
+$buildDir = Join-Path $env:TEMP 'gym-vscode-api02-classes'
+New-Item -ItemType Directory -Force -Path $buildDir | Out-Null
+javac --add-modules jdk.httpserver -d $buildDir server\GymCatalogue.java server\GymReservationDomain.java server\ReservationStateStore.java server\GymReservationServer.java tests\java\GymReservationDomainTest.java tests\java\ReservationStateStoreTest.java
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+java --add-modules jdk.httpserver -cp $buildDir GymReservationDomainTest
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+java --add-modules jdk.httpserver -cp $buildDir ReservationStateStoreTest
+```

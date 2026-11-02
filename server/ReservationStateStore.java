@@ -226,8 +226,12 @@ public final class ReservationStateStore {
         return quoted.append('"').toString();
     }
 
+    static Object parseJson(String json) throws IOException {
+        return new JsonParser(json).parse();
+    }
+
     private static ApplicationState decode(String json) throws IOException {
-        Object parsed = new JsonParser(json).parse();
+        Object parsed = parseJson(json);
         Map<String, Object> root = object(parsed, "root");
         requireExactFields(root, ROOT_FIELDS, "root");
 

@@ -34,6 +34,17 @@
 | TEST-02 | Verify persistence across restart | Mandatory end-to-end demonstration scenario: initial availability is 6; book 2 and availability becomes 4; restart and verify the reservation remains and availability is 4; cancel and availability returns to 6; restart and verify the reservation remains Cancelled and availability remains 6. | API-02, API-07, TEST-01 | Proposed | Pending; no new review finding recorded. | Pending; no outcome recorded. |
 | DOC-08 | Complete final review and closeout | Documentation matches delivered implementation and observed evidence; AI findings and human outcomes are recorded separately; task status changes are user-approved. | All implementation tasks | Proposed | Pending; no new review finding recorded. | Pending; no outcome recorded. |
 
+## Implementation and test evidence
+
+These notes record observed implementation/test evidence only; they do not approve or change task status.
+
+| Task | Observed evidence |
+|---|---|
+| API-01 | Java catalogue/domain classes represent all four classes, prices, 12 session IDs/times, capacity and initial availability. Participant validation and totals are covered by 58 passing Java assertions. |
+| API-02 | `ReservationStateStore` initializes/loads `data/reservations.json`, persists reservations/statuses/availability and restores saved state on reload. Initialization, load/save, restoration, and error handling are covered by 21 passing Java assertions. |
+| API-03 | `POST /reservations` validates request JSON, returns a Confirmed reservation with code and price fields, updates availability, and saves before returning 201. Error/status validation, unchanged state on invalid input or persistence failure, code uniqueness/collision and exhaustion are covered by 51 passing Java assertions. |
+| Browser regression | The existing browser test page reported 112 passed and 0 failed when run through the server after API-02. It was not rerun after API-03; frontend source was unchanged. |
+
 ## Notes
 
 - Task acceptance criteria trace to `REQUIREMENTS.md`; they do not add product behavior.

@@ -1,6 +1,6 @@
 # Gym Reservation API Extension — Implementation Plan
 
-**Status:** Proposed. API-01 and API-02 implementation work has been authorized and performed; the corresponding task statuses remain Proposed until the user approves status changes.
+**Status:** Proposed. API-01, API-02, and API-03 reservation creation work has been authorized and performed; all task statuses remain Proposed until the user approves status changes.
 
 ## Sources and current project
 
@@ -76,6 +76,10 @@ User approval of the open decisions required to choose implementation technology
 Phase 0 approvals for backend/runtime, storage format/location, code generation, and test tooling.
 
 ## Phase 2 — REST API contract
+
+### Implementation progress
+
+`POST /reservations` has been implemented and covered by handler-level Java tests as API-03. It creates a Confirmed reservation, generates a unique six-digit code, deducts current availability, and persists before returning success. The endpoint tests cover successful response fields, request errors and precedence, no-change behavior on failures, code collisions, and code-space exhaustion. `GET /classes`, reservation lookup, and cancellation remain unimplemented.
 
 ### Work
 
@@ -200,7 +204,7 @@ The user approved Java 21 with `com.sun.net.httpserver.HttpServer`, port 3000, s
 
 The following implementation details remain open:
 
-1. **Reservation-code generation.** The format and uniqueness are mandatory; generation strategy, collision handling, and behavior if the six-digit code space is exhausted remain to be decided.
-2. **API error representation.** The BRDs specify readable messages but do not prescribe the JSON error shape.
-3. **Persistence failure API behavior.** Storage exceptions are surfaced and do not replace in-memory state, but the BRDs do not prescribe the HTTP status or UI behavior for persistence failures.
-4. **Later API/UI test approach.** Java domain and persistence tests run without dependencies; the integration strategy for API contract and browser/API checks remains to be selected before those phases.
+1. **Reservation-code exhaustion response.** API-03 uses randomized starting points with a scan of the six-digit code space to avoid collisions and detect exhaustion. The BRDs do not prescribe an HTTP status for exhaustion; the implementation currently returns 503.
+2. **API error representation.** The BRDs specify readable messages but do not prescribe the JSON error shape; the create endpoint returns a JSON object with a `message` field.
+3. **Persistence failure API behavior.** The BRDs do not prescribe the HTTP status or UI behavior for file failures; the create endpoint currently returns 500 after a save failure and leaves active/persisted state unchanged.
+4. **Later endpoint/test approach.** `POST /reservations` has handler-level HTTP tests; the remaining endpoints and broader API/UI integration tests remain for their separately authorized tasks.

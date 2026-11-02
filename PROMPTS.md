@@ -309,3 +309,30 @@ Record significant AI prompts used during project development and the resulting 
 > When finished, report changed files, implementation details, test commands, and actual test results. Provide exact PowerShell commands to compile and run the tests.
 
 **Result:** Added file-backed JSON state loading/saving, startup initialization, and sequential HTTP request execution. Added persistence tests; no API endpoints or task-status changes.
+
+## 10. Implement API-03 reservation creation endpoint
+
+**Prompt (actual user request):**
+
+> Implement API-03 only: Reservation API endpoints.
+>
+> Read TASKS.md and REQUIREMENTS.md carefully and follow the exact API-03 acceptance criteria.
+>
+> Requirements:
+>
+> 1. Implement the reservation API endpoints defined in REQUIREMENTS.md.
+> 2. Integrate them with the existing GymReservationServer, GymReservationDomain, GymCatalogue and API-02 file-backed persistence.
+> 3. Validate incoming requests and return the HTTP status codes and JSON response structures specified in REQUIREMENTS.md.
+> 4. Ensure reservation creation updates availability and persists the state.
+> 5. Ensure cancellation updates reservation status, restores availability and persists the state.
+> 6. Ensure invalid requests do not modify application state.
+> 7. Add automated Java tests for all API-03 acceptance criteria, including successful and unsuccessful requests.
+> 8. Preserve existing frontend behavior. Do not connect or modify the frontend yet unless API-03 explicitly requires it.
+> 9. Do not implement API-04 or later tasks.
+> 10. Do not change task statuses or mark tasks Complete.
+>
+> After implementation, report endpoints and methods, examples, changed files, exact PowerShell test commands, actual results, and remaining API-03 requirements. Do not claim completion if an API-03 criterion remains unimplemented.
+
+**Scope clarification:** The request included cancellation, which is API-07, while also prohibiting API-04 and later. The user selected “API-03 only — implement POST /reservations; defer classes, lookup, and cancellation endpoints.”
+
+**Result:** Implemented and tested `POST /reservations` only. Later endpoints and UI integration remain deferred; no task statuses changed.

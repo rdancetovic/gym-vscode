@@ -2,15 +2,15 @@
 
 ## Purpose and status
 
-This plan maps the approved `REQUIREMENTS.md` to automated and manual verification. API-01 domain tests and API-02 persistence tests have been implemented and run; no REST API endpoints or endpoint tests are implemented yet.
+This plan maps the approved `REQUIREMENTS.md` to automated and manual verification. API-01 domain tests, API-02 persistence tests, and the API-03 `POST /reservations` endpoint tests have been implemented and run. The other three API endpoints are not implemented.
 
-The existing browser suite is loaded from `tests/tests.html`. All 112 tests passed when run through the Java server after API-02 changes. The Java domain and persistence suites are standalone test mains compiled with the installed JDK; no third-party test library or build system is used.
+The existing browser suite is loaded from `tests/tests.html`. All 112 tests passed when run through the Java server after API-02 changes; the browser suite was not rerun after API-03 because frontend files were unchanged. The Java domain, persistence, and create-endpoint suites are standalone test mains compiled with the installed JDK; no third-party test library or build system is used.
 
 ## Test approach
 
 - Run the existing browser suite as a baseline before changing application behavior and record the actual result.
-- Run the Java domain and persistence test mains using the JDK.
-- Add focused tests for the API contract and UI/API integration using an approved approach.
+- Run the Java domain, persistence, and reservation-create endpoint test mains using the JDK.
+- Add focused tests for the remaining API endpoints and UI/API integration as those tasks are authorized.
 - Keep regression tests for original requirements not overridden by the extension.
 - Use a temporary or test-owned data file/fixture where the chosen test approach supports it; do not overwrite user data.
 - Verify persistence by stopping and restarting the running application with the same configured data file.
@@ -27,6 +27,7 @@ The existing browser suite is loaded from `tests/tests.html`. All 112 tests pass
 | Reservation code | Create multiple confirmed reservations; verify each code is unique and matches `GYM-` followed by exactly six digits. |
 | `GET /classes` | API contract test checks HTTP 200, four class objects, three sessions each, required exact field names/types, and current remaining places. Confirm GET does not change data. |
 | `POST /reservations` | Valid request returns HTTP 201 and all required Reservation fields with correct class, session, participants, prices, status, code, and deducted availability. |
+| API-03 reservation creation | Handler-level HTTP tests check exact success fields/status, code format/uniqueness/collision handling/exhaustion, malformed or invalid input, validation ordering, unknown/full session, and no state changes on failures including persistence errors. |
 | `GET /reservations/{code}` | Confirmed and Cancelled records each return HTTP 200 with all required fields and correct current status. |
 | `DELETE /reservations/{code}` | Confirmed reservation returns HTTP 200 as Cancelled and restores all places; record remains available for lookup. Repeated cancellation returns HTTP 409. |
 | API input/errors | Verify missing required fields, invalid/empty session ID, non-whole or less-than-one participants, malformed code, unknown session, unknown valid-format reservation code, insufficient places/full session, and already-cancelled reservation. Check status and readable message against `REQUIREMENTS.md`. |
@@ -122,22 +123,25 @@ Update old tests/manual expectations that specifically require refresh/reopen to
 
 ## Open testing decisions and limits
 
-- Java backend/domain/persistence test invocation is established below. Decide the API contract/integration test approach before endpoint implementation.
+- Java backend/domain/persistence/create-endpoint test invocation is established below. Extend coverage for later endpoints when authorized.
 - The frontend and server use the approved same-origin host on port 3000; the server must be launched from the repository root to serve the frontend and use the configured state path.
 - The BRDs specify readable API errors but not the JSON error shape.
 - The BRDs do not prescribe status codes or UI behavior for file read/write failures. Do not assert an unapproved response code for those failures.
-- The browser suite passed 112/112 tests after API-02 changes. Java test counts are recorded with the actual test execution.
+- The browser suite passed 112/112 tests after API-02 changes; it was not rerun for API-03 because the frontend was unchanged. Java test counts are recorded with the actual test execution.
+- Latest rerun of the Java suites: API-01 **58 assertions passed**, API-02 **21 assertions passed**, API-03 **51 assertions passed**.
 
 ## Java domain and persistence test command
 
 Run from the repository root in PowerShell:
 
 ```powershell
-$buildDir = Join-Path $env:TEMP 'gym-vscode-api02-classes'
+$buildDir = Join-Path $env:TEMP 'gym-vscode-api03-classes'
 New-Item -ItemType Directory -Force -Path $buildDir | Out-Null
-javac --add-modules jdk.httpserver -d $buildDir server\GymCatalogue.java server\GymReservationDomain.java server\ReservationStateStore.java server\GymReservationServer.java tests\java\GymReservationDomainTest.java tests\java\ReservationStateStoreTest.java
+javac --add-modules jdk.httpserver -d $buildDir server\GymCatalogue.java server\GymReservationDomain.java server\ReservationStateStore.java server\ReservationCodeGenerator.java server\ReservationApiHandler.java server\GymReservationServer.java tests\java\GymReservationDomainTest.java tests\java\ReservationStateStoreTest.java tests\java\ReservationApiHandlerTest.java
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 java --add-modules jdk.httpserver -cp $buildDir GymReservationDomainTest
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 java --add-modules jdk.httpserver -cp $buildDir ReservationStateStoreTest
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+java --add-modules jdk.httpserver -cp $buildDir ReservationApiHandlerTest
 ```

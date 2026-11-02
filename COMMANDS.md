@@ -55,3 +55,19 @@ java --add-modules jdk.httpserver -cp $buildDir GymReservationServer
 ```
 
 Started the server to verify initialization of `data/reservations.json` and frontend serving on port 3000. The first attempt found port 3000 occupied by an earlier project test server; that previously launched server was stopped, after which the updated server started and was verified. The API-02 verification server was stopped afterwards.
+
+## API-03 Java verification
+
+```powershell
+$buildDir = Join-Path $env:TEMP 'gym-vscode-api03-classes'; New-Item -ItemType Directory -Force -Path $buildDir | Out-Null; javac --add-modules jdk.httpserver -d $buildDir server\GymCatalogue.java server\GymReservationDomain.java server\ReservationStateStore.java server\ReservationCodeGenerator.java server\ReservationApiHandler.java server\GymReservationServer.java tests\java\GymReservationDomainTest.java tests\java\ReservationStateStoreTest.java tests\java\ReservationApiHandlerTest.java; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; java --add-modules jdk.httpserver -cp $buildDir GymReservationDomainTest; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; java --add-modules jdk.httpserver -cp $buildDir ReservationStateStoreTest; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; java --add-modules jdk.httpserver -cp $buildDir ReservationApiHandlerTest
+```
+
+Compiled the server and Java tests, then ran API-01 (58 assertions), API-02 (21 assertions), and API-03 (51 assertions); all passed.
+
+The same suites were rerun during the documentation update:
+
+```powershell
+$buildDir = Join-Path $env:TEMP 'gym-vscode-api03-doc-check'; New-Item -ItemType Directory -Force -Path $buildDir | Out-Null; javac --add-modules jdk.httpserver -d $buildDir server\GymCatalogue.java server\GymReservationDomain.java server\ReservationStateStore.java server\ReservationCodeGenerator.java server\ReservationApiHandler.java server\GymReservationServer.java tests\java\GymReservationDomainTest.java tests\java\ReservationStateStoreTest.java tests\java\ReservationApiHandlerTest.java; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; java --add-modules jdk.httpserver -cp $buildDir GymReservationDomainTest; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; java --add-modules jdk.httpserver -cp $buildDir ReservationStateStoreTest; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; java --add-modules jdk.httpserver -cp $buildDir ReservationApiHandlerTest; $testExit = $LASTEXITCODE; Remove-Item -LiteralPath $buildDir -Recurse; exit $testExit
+```
+
+Observed output: API-01 **58 assertions passed**, API-02 **21 assertions passed**, and API-03 **51 assertions passed**.

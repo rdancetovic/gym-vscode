@@ -1,75 +1,127 @@
-# Test Plan — Gym Class Reservation
+# Test Plan — Gym Reservation API Extension
 
-## Run the tests
+## Purpose and status
 
-Open `tests/tests.html` in a browser. A successful run displays **All 112 tests passed**. Each test result is listed on the page. There is no Node-based or command-line test runner.
+This plan maps the approved `REQUIREMENTS.md` to proposed automated and manual verification. It does not claim that extension tests have been implemented or run.
 
-Open `index.html` in a browser to exercise the application manually. Reservations are held in page memory only; refreshing or reopening starts with the initial availability again.
+The existing browser suite is loaded from `tests/tests.html`. Previous project documentation reports 112 browser tests for the original in-memory application. That count is historical documentation; the suite was not rerun during this preparation. There is no documented command-line test runner. Backend/API test tooling remains an approval decision.
 
-## Automated test inventory
+## Test approach
 
-| Test file | Coverage | Tests |
-|---|---|---:|
-| `tests/data.test.js` | Class catalogue, prices, session schedule, initial availability, frozen catalogue, fresh state | 21 |
-| `tests/reservation.test.js` | Availability lookups, full checks, totals, validation, immutable confirmation, accumulated deductions | 29 |
-| `tests/ui.test.js` | Class/session selection, status labels, full and low availability, selection reset | 12 |
-| `tests/participants.test.js` | Participant controls, summary, total, validation, session-change adjustment | 21 |
-| `tests/confirm.test.js` | Confirmation, deductions, repeat bookings, reset, focus, anonymous flow | 16 |
-| `tests/a11y.test.js` | Live announcements, descriptions, focus, reduced-motion rule | 13 |
-| **Total** |  | **112** |
+- Run the existing browser suite as a baseline before changing application behavior and record the actual result.
+- Add focused tests for the backend/domain, persistence, API contract, and UI/API integration using the user-approved tooling.
+- Keep regression tests for original requirements not overridden by the extension.
+- Use a temporary or test-owned data file/fixture where the chosen test approach supports it; do not overwrite user data.
+- Verify persistence by stopping and restarting the running application with the same configured data file.
+- Do not report a test as passing until it has actually run and passed.
 
-## Requirement traceability
+## Coverage matrix
 
-| Requirement | Verification |
+| Requirement area | Planned verification |
 |---|---|
-| FR-001, FR-021 | Manual M1 and M13; `tests/confirm.test.js` checks that personal/payment fields are absent. |
-| FR-002 | `tests/data.test.js` checks catalogue prices; `tests/ui.test.js` checks displayed class prices. |
-| FR-003 | `tests/data.test.js` checks capacity, all 12 initial places, and session inventory. |
-| FR-004 | `tests/ui.test.js` checks class selection. |
-| FR-005 | `tests/ui.test.js` checks class-specific session options and list replacement. |
-| FR-006 | `tests/ui.test.js` checks day/time and availability labels. |
-| FR-007 | `tests/data.test.js`, `tests/reservation.test.js`, and `tests/ui.test.js` check full sessions and rejection. |
-| FR-008 | `tests/reservation.test.js` and `tests/participants.test.js` check minimum, integer, and remaining-place bounds. |
-| FR-009 | `tests/reservation.test.js` and `tests/participants.test.js` check price calculation and display. |
-| FR-010, FR-011 | `tests/participants.test.js` checks summary fields, live changes, and selection edits. |
-| FR-012 | `tests/reservation.test.js` and `tests/participants.test.js` check invalid drafts and feedback. |
-| FR-013, FR-014 | `tests/confirm.test.js` checks explicit valid confirmation and confirmation details. |
-| FR-015 | `tests/reservation.test.js` and `tests/confirm.test.js` check deductions. |
-| FR-016, FR-019 | `tests/confirm.test.js` and manual M9 check retained availability after starting another reservation. |
-| FR-017 | `tests/data.test.js`, `tests/confirm.test.js`, and manual M10 check fresh initial availability after reset/reload. |
-| FR-018 | This is an explicit scope limit: availability is held in one page’s memory and is not synchronized between browsers. |
-| FR-020 | `tests/ui.test.js`, `tests/participants.test.js`, `tests/confirm.test.js`, and manual M1–M12 cover the user flow. |
-| FR-022 | Scope exclusion; verify changes against `REQUIREMENTS.md` and do not add excluded features. |
+| Classes, prices, sessions, IDs, capacity, initial availability | Catalogue/domain tests verify all four classes, exact prices, all 12 session IDs and times, capacity 10, and initial place counts. |
+| Reservation flow, participant limits, and price | Domain and UI tests cover minimum 1, whole-number counts, exact available-place boundary, over-capacity, full sessions, and participant count × unit price. |
+| Summary, explicit confirmation, success | UI tests verify all required summary fields, editable choices before confirmation, explicit action, success details, and no payment processing. |
+| Anonymous use | UI regression verifies no personal/account/payment data is collected or required. |
+| Reservation code | Create multiple confirmed reservations; verify each code is unique and matches `GYM-` followed by exactly six digits. |
+| `GET /classes` | API contract test checks HTTP 200, four class objects, three sessions each, required exact field names/types, and current remaining places. Confirm GET does not change data. |
+| `POST /reservations` | Valid request returns HTTP 201 and all required Reservation fields with correct class, session, participants, prices, status, code, and deducted availability. |
+| `GET /reservations/{code}` | Confirmed and Cancelled records each return HTTP 200 with all required fields and correct current status. |
+| `DELETE /reservations/{code}` | Confirmed reservation returns HTTP 200 as Cancelled and restores all places; record remains available for lookup. Repeated cancellation returns HTTP 409. |
+| API input/errors | Verify missing required fields, invalid/empty session ID, non-whole or less-than-one participants, malformed code, unknown session, unknown valid-format reservation code, insufficient places/full session, and already-cancelled reservation. Check status and readable message against `REQUIREMENTS.md`. |
+| Validation precedence | Test invalid input before lookup/conflict; unknown session plus participant count 0 returns 400. Test not-found before 409 conflict checks where the contract applies. |
+| Failed-operation integrity | For each defined failing operation, compare reservations and availability before/after; no stored data changes. |
+| File initialization and persistence | With no data file, initialize original availability. After booking, restart and verify record/status/remaining places. Cancel, restart again, verify Cancelled record and restored availability. |
+| Frontend/API integration | Verify catalogue loads from API; valid confirmation submits to API; UI uses server response; starting another reservation shows current server availability; API errors display clear feedback and do not appear as success. |
+| Responsive/accessibility regression | Preserve applicable existing keyboard, focus, live-region, light/dark, reduced-motion, and viewport behavior; run established manual checks where available. |
+| Scope | Verify no accounts, personal data, payment processing, or simultaneous multi-visitor behavior was added. |
 
-The session inventory and support-case finding are covered by the FR-003 and FR-016 checks. The support-platform response requested in `Support-Case.md` is a support task, not an application test requirement. Browser tests and the reported scenario verify expected behavior; they do not diagnose an implementation root cause beyond the behavior under test.
+## API contract cases
+
+### `GET /classes`
+
+- Success status is 200.
+- Response is JSON in the specified array/class/session shape.
+- Required fields are present with defined types and exact casing.
+- Contains the four named classes and three specified sessions each.
+- `capacity` is 10; `remainingPlaces` matches current persisted state.
+- Additional response fields are permitted by the BRD.
+- Request does not mutate stored state.
+
+### `POST /reservations`
+
+- Valid request has `sessionId` text and `participants` as a whole number from 1 through current availability.
+- Valid request returns 201, a unique code matching the format, status Confirmed, complete Reservation fields, and correct total.
+- Availability is reduced by the participant count and reservation is stored.
+- Defined errors are returned in required order: 400 invalid input, 404 unknown session, 409 insufficient places.
+- Error response includes a readable message. The exact error JSON shape is not prescribed.
+- Failure leaves stored reservations and availability unchanged.
+
+### `GET /reservations/{code}`
+
+- Valid code for an existing Confirmed or Cancelled reservation returns 200 and the complete reservation.
+- Malformed code returns 400.
+- Correctly formatted but unknown code returns 404.
+- Lookup does not mutate state.
+- Failure leaves stored state unchanged.
+
+### `DELETE /reservations/{code}`
+
+- Valid code for Confirmed reservation returns 200 with status Cancelled and the same required reservation details.
+- All reserved places return to the session; cancellation is stored.
+- Malformed code returns 400; valid-format unknown code returns 404; already-cancelled record returns 409.
+- Failed cancellation leaves stored state unchanged.
+- Cancelled reservation remains retrievable with GET.
+
+## Persistence scenario
+
+Run against the configured file using the approved application start/stop procedure:
+
+1. Start with no data file and verify Yoga Wednesday (`YOGA-2`) has 6 places.
+2. Reserve 2 places; verify status Confirmed and 4 places remaining.
+3. Stop and restart the application using the same data file.
+4. Verify the reservation remains Confirmed and Yoga Wednesday has 4 places.
+5. Cancel the reservation; verify Cancelled and 6 places remaining.
+6. Stop and restart again.
+7. Verify the reservation remains Cancelled and Yoga Wednesday has 6 places.
+
+Also verify that if no data file exists on startup, the complete initial inventory is used.
+
+## Original-flow regression checks
+
+Retain relevant checks for:
+
+- The four classes, prices, sessions, and initial availability.
+- Class/session selection and changing selections before confirmation.
+- Full-session restriction and remaining-place feedback.
+- Participant minimum, integer requirement, and available-place maximum.
+- Automatic total and review summary.
+- Explicit confirmation and useful success feedback.
+- Starting another reservation with already-updated server availability.
+- Anonymous reservation and absence of payment processing.
+
+Update old tests/manual expectations that specifically require refresh/reopen to reset availability or assert there are no network calls/storage. These behaviors are superseded by `BRD-Extension.md`.
 
 ## Manual checks
 
 | ID | Check | Expected result |
 |---|---|---|
-| M1 | Open `index.html` in a fresh page without making a selection. | Class and session choices are visible; the participant controls and Confirm are disabled; no reservation is selected; the hidden live region is empty. |
-| M2 | Select each class and compare all sessions with the Session Inventory in `REQUIREMENTS.md`. | All four classes and their three day/time sessions display the listed initial places. Prices are Yoga €8, Pilates €10, Functional Training €12, and Spinning €11. |
-| M3 | Inspect Yoga Saturday 10:00, Pilates Saturday 11:30, and Spinning Thursday 18:00. | Yoga Saturday (2) and Spinning Thursday (1) are highlighted as low availability. Pilates Saturday is visible as Full and cannot be selected. |
-| M4 | Select Yoga, then Wednesday 19:00; switch to Pilates. | The review reflects Yoga — Wednesday 19:00 first. Changing class clears the session and resets participants to 1. |
-| M5 | Select Yoga Wednesday and use the decrement, number field, and increment controls. | The minimum is 1; values must be whole numbers; the maximum is the current remaining places (6 initially). Controls cannot move outside those bounds. |
-| M6 | Select Yoga Monday, set 8 participants, then select Yoga Wednesday. Also try switching from Wednesday (6) to Monday (10) with 3 participants. | The first change reduces the count to 6 and explains the reduction. The second preserves 3. |
-| M7 | Check live summary examples: Functional Training, 3 participants; Yoga, 2 participants. | Summary shows class, session, participants, unit price, and total. Totals are €36 and €16 respectively and update when the participant count changes. |
-| M8 | Try 0, a negative value, a fraction, or more participants than remaining places. | Each invalid value has an understandable reason in the visible status; Confirm is disabled. |
-| M9 | Select Yoga Wednesday, 2 participants, and confirm. Then choose Make another reservation and select Yoga Wednesday again without refreshing. | Confirmation identifies Yoga — Wednesday 19:00, 2 participants, €8 each, €16 total, and 4 places left; it says no payment is taken. The new reservation still shows 4 places. |
-| M10 | Reserve the last Spinning Thursday place (1 participant). | Confirmation says the session is now full. Starting another reservation shows that session as Full and unavailable. |
-| M11 | Continue confirming reservations for one session until full; fill each session in a class. | Every booking deducts from the current balance; a full session cannot be booked again. A class with every session full shows “No places available”. |
-| M12 | After confirming at least one booking, refresh or reopen `index.html`. | Availability resets to the initial Session Inventory values; for Yoga Wednesday it returns to 6. |
-| M13 | Use keyboard-only navigation and inspect announcements, both system themes, reduced motion, and a 390px-wide phone viewport. | Native radio choices work with keyboard; focus moves to the confirmation heading and returns to the first class after starting another reservation. A persistent polite live region announces changes but is empty on page load; Confirm is described by the visible validation text. Text contrast is at least 4.5:1 for normal text and 3:1 for large text in both themes. Reduced motion is respected. At 390px, class options are two columns, sessions stack, primary action buttons are full-width, and there is no horizontal overflow. No personal/payment inputs, forms, network calls, or browser storage are present. |
+| M1 | Open the application against an initialized data file and inspect each class. | Four classes, prices, sessions, days/times, capacity and current places match the API data. |
+| M2 | Select a full session and attempt to proceed. | It is displayed as full and cannot be reserved; feedback explains the invalid state. |
+| M3 | Make a valid reservation for Yoga Wednesday, 2 participants. | Explicit confirmation shows Yoga, Wednesday 19:00, 2 participants, €8 each, €16 total, and the reservation code; remaining availability is 4. |
+| M4 | Start another reservation without restarting. | Yoga Wednesday still shows 4 places. |
+| M5 | Restart the application using the same data file. | Reservation remains Confirmed and availability remains 4. |
+| M6 | Look up the reservation by its displayed code. | All required reservation fields and Confirmed status are shown. |
+| M7 | Cancel that reservation. | Whole reservation changes to Cancelled; 2 places return, making availability 6. |
+| M8 | Look up the cancelled reservation, then attempt cancellation again. | Lookup still shows Cancelled; second cancellation gives clear conflict feedback. |
+| M9 | Restart after cancellation and lookup the reservation again. | Cancelled status persists and availability remains 6. |
+| M10 | Try malformed and well-formed unknown codes; try an over-capacity reservation. | Clear feedback corresponds to API errors; no invalid action appears successful. |
+| M11 | Review keyboard use, focus and announcements, both themes, reduced motion, and the established phone viewport. | Existing relevant accessibility and responsive behaviors remain usable. |
 
-## Accessibility contrast checks
+## Open testing decisions and limits
 
-Contrast is calculated as `(L1 + 0.05) / (L2 + 0.05)`, where `L1` is the lighter relative luminance. Check rendered text against its immediate background in both system themes, including normal, selected, disabled, full, low-availability, validation, confirmation, and button states. Required minimums are 4.5:1 for normal text and 3:1 for large text. Disabled-control exemptions do not replace checks for meaningful disabled-state labels.
-
-The final integrated-browser contrast sweep measured a minimum of **4.51:1 in light mode** and **5.82:1 in dark mode** across the rendered initial, selection, validation, and confirmation flows. The automated suite separately asserts contrast for full-session text, the Full badge, and disabled Confirm.
-
-## Known limits
-
-- Availability is in-memory only. It resets on refresh/reopen and is not shared across users, tabs, or browsers.
-- The browser test suite verifies DOM semantics and configured announcements, not the spoken output of every browser/screen-reader combination. M13 requires an assistive-technology spot check when available.
-- Automated contrast assertions cover the full-session label and disabled Confirm control; the broader contrast matrix and phone checks remain manual acceptance checks and do not certify WCAG conformance or every viewport.
-- The app does not process payment or collect personal data, and it has no backend or persistent booking storage.
+- Select backend/API test tooling only after the backend runtime is approved.
+- Decide how the frontend and API are launched together for integrated browser checks; host/port and serving arrangement are not prescribed.
+- The BRDs specify readable API errors but not the JSON error shape.
+- The BRDs do not prescribe status codes or UI behavior for file read/write failures. Do not assert an unapproved response code for those failures.
+- No baseline or extension test results are asserted in this preparation.

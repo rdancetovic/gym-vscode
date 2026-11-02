@@ -1,62 +1,341 @@
-# Requirements — Gym Class Reservation
+# Requirements — Gym Reservation API Extension
 
-## Sources and scope
+**Status:** Approved by the user. This document consolidates the mandatory behavior in `BRD.md` and `BRD-Extension.md`. It does not choose technologies or resolve details the BRDs leave open.
 
-This document consolidates the business and functional requirements in `BRD.md` and the reported availability behavior in `Support-Case.md`. The BRD defines expected behavior; the support case supplies a concrete scenario to test against it.
+## 1. Sources and precedence
 
-## Requirements
+The original BRD defines the reservation service. The extension BRD adds an API, file-backed persistence, reservation codes, lookup, and cancellation.
 
-| ID | Requirement | Acceptance criteria |
+Where they conflict, **BRD-Extension.md takes precedence**. In particular:
+
+- Reservations and availability persist after the application restarts; they no longer reset on refresh or reopening.
+- Server-side API functionality and file storage are in scope.
+- Cancellation is in scope.
+
+All other original BRD requirements remain in effect, including the class catalogue, prices, sessions, capacity, reservation flow, pricing, anonymity, and no-payment rule.
+
+## 2. Purpose and users
+
+The application shall let a visitor reserve places in predefined gym classes, look up a reservation using its code, and cancel a reservation using its code.
+
+Reservations are anonymous. No account, membership, or personal information is required. The reservation code is the only link between a visitor and a reservation.
+
+The application shall not process payments.
+
+## 3. Classes, sessions, prices, and capacity
+
+The application shall provide these classes and prices:
+
+| Class | Price per participant |
+|---|---:|
+| Yoga | €8 |
+| Pilates | €10 |
+| Functional Training | €12 |
+| Spinning | €11 |
+
+Each class has three predefined sessions. Each session has a maximum capacity of 10 participants.
+
+| Class | Session | Session ID | Initial available places |
+|---|---|---|---:|
+| Yoga | Monday 18:00 | `YOGA-1` | 10 |
+| Yoga | Wednesday 19:00 | `YOGA-2` | 6 |
+| Yoga | Saturday 10:00 | `YOGA-3` | 2 |
+| Pilates | Tuesday 18:00 | `PILATES-1` | 8 |
+| Pilates | Thursday 19:00 | `PILATES-2` | 4 |
+| Pilates | Saturday 11:30 | `PILATES-3` | 0 |
+| Functional Training | Monday 19:30 | `FUNCTIONAL-1` | 5 |
+| Functional Training | Wednesday 18:00 | `FUNCTIONAL-2` | 10 |
+| Functional Training | Friday 18:30 | `FUNCTIONAL-3` | 3 |
+| Spinning | Tuesday 19:30 | `SPINNING-1` | 7 |
+| Spinning | Thursday 18:00 | `SPINNING-2` | 1 |
+| Spinning | Sunday 10:00 | `SPINNING-3` | 10 |
+
+A session with zero remaining places is full and cannot be reserved.
+
+## 4. Reservation flow and business rules
+
+### 4.1 Creating a reservation
+
+A visitor shall be able to:
+
+1. Select one of the four classes.
+2. Select a predefined session for that class.
+3. Select the number of participants.
+4. Review the class, session, participant count, price per participant, and total price.
+5. Explicitly confirm the reservation.
+6. See a clear success confirmation.
+7. Start another reservation.
+
+Before confirmation, the visitor shall be able to change the selected class, session, or participant count.
+
+### 4.2 Participant limits and price
+
+- A reservation must be for at least one participant.
+- The participant count must not exceed the session’s current remaining places.
+- A full session cannot be reserved.
+- The total price is participant count multiplied by the class price per participant.
+- No payment is taken.
+
+### 4.3 Confirmation and availability
+
+A valid reservation shall be confirmed only following an explicit visitor action. On successful confirmation, the application shall:
+
+- Create a reservation with status `Confirmed`.
+- Assign it a unique reservation code.
+- Calculate and return its price details.
+- Deduct the reserved places from the session.
+- Store the reservation and updated availability.
+- Provide a confirmation that identifies the reservation, including its code.
+
+Starting another reservation shall not discard confirmed availability changes.
+
+Availability and reservations shall remain stored after an application restart. The original BRD’s reset-on-refresh/reopening behavior is overridden.
+
+### 4.4 Lookup
+
+A visitor shall be able to enter a reservation code and see the matching reservation’s class, session day and time, participant count, price per participant, total price, and status.
+
+Status shall be `Confirmed` or `Cancelled`. If no reservation exists for a correctly formatted code, the visitor shall receive clear feedback.
+
+### 4.5 Cancellation
+
+A visitor shall be able to cancel the whole reservation using its code.
+
+- Partial cancellation or reducing the participant count is not supported.
+- Cancellation is allowed at any time; no cancellation time restriction is specified.
+- On successful cancellation, the status becomes `Cancelled` and the reservation’s places return to the session.
+- A cancelled reservation remains available for lookup.
+- A cancelled reservation cannot be cancelled again; the visitor shall receive clear feedback.
+
+## 5. REST API
+
+The API shall exchange data in JSON and provide these four operations:
+
+| Method and path | Purpose | Success status |
+|---|---|---:|
+| `GET /classes` | Return classes, prices, sessions, and current availability | 200 |
+| `POST /reservations` | Create a reservation | 201 |
+| `GET /reservations/{code}` | Look up a reservation | 200 |
+| `DELETE /reservations/{code}` | Cancel a reservation | 200 |
+
+The `{code}` path parameter is the reservation code, for example `GYM-004217`.
+
+### 5.1 `GET /classes`
+
+Returns all four classes and their three sessions, with current availability. It does not change stored data.
+
+The response is a JSON array. Each class object shall contain:
+
+| Field | Type | Meaning |
 |---|---|---|
-| FR-001 | The application shall let a visitor reserve places in a predefined group exercise session. No membership or user account shall be required. | A visitor can use the reservation flow without signing in or providing membership details. |
-| FR-002 | The application shall offer Yoga (€8 per participant), Pilates (€10), Functional Training (€12), and Spinning (€11). | The four classes and their respective prices are available for selection and used in price calculation. |
-| FR-003 | Each class shall have the predefined sessions and initial available places listed below. Each session has a maximum capacity of 10 participants. | On a fresh application start, every session shows its specified initial availability. A session with 0 places is treated as full. |
-| FR-004 | The user shall be able to select one of the four classes. | Selecting a class makes that class’s sessions available for selection. |
-| FR-005 | The user shall be able to select a predefined session belonging to the selected class. | A session from another class cannot be selected as the current class’s session. |
-| FR-006 | The application shall show each session’s day, time, whether places are available, and the number of places remaining. | The displayed availability reflects the current remaining places, including 0 for a full session. |
-| FR-007 | A session with no remaining places shall not be reservable. | A full session cannot be confirmed as a reservation. |
-| FR-008 | A reservation shall be for at least 1 participant and no more participants than the selected session’s current remaining places. | The accepted participant count is bounded by 1 and the current remaining availability; an over-capacity reservation cannot be confirmed. |
-| FR-009 | The application shall calculate total price as participant count multiplied by the selected class’s price per participant. No payment shall be taken. | The displayed total equals the participant count × unit price. The application does not process payment. |
-| FR-010 | Before confirmation, the application shall show a reservation summary containing class, session, participant count, price per participant, and total price. | All five values are shown for the reservation being reviewed. |
-| FR-011 | Before confirmation, the user shall be able to change the selected class, session, or participant count. | Changes are reflected in the summary and recalculated total before confirmation. |
-| FR-012 | The application shall reject incomplete or invalid reservations, including missing class or session, fewer than 1 participant, more participants than remaining places, or a full session. It shall give feedback sufficient to explain why confirmation is unavailable. | Each listed invalid state prevents confirmation and provides understandable feedback. |
-| FR-013 | A valid reservation shall require explicit user confirmation. | No reservation is confirmed before the user takes an explicit confirmation action. |
-| FR-014 | After a valid reservation is confirmed, the application shall clearly indicate success and provide enough information to understand what was reserved. | The confirmation identifies the confirmed reservation sufficiently for the user to understand it. No email, SMS, printed ticket, or external confirmation is required. |
-| FR-015 | On confirmation, the application shall deduct the reserved participant count from that session’s remaining availability. | If 6 places remain and 2 are confirmed, the session shows 4 places afterward. |
-| FR-016 | Availability deductions shall remain in effect while the application remains open in the current browser session, including after the user starts another reservation. | In the support-case scenario, Yoga — Wednesday 19:00 starts at 6; confirming 2 changes it to 4; selecting “Start another reservation” and selecting Yoga again still shows 4, without refreshing or closing the browser. Subsequent confirmed reservations deduct from the then-current availability. |
-| FR-017 | Refreshing or reopening the application shall restore the initial availability listed in this document. | After refresh or reopening, all sessions return to their listed initial availability. |
-| FR-018 | The application is not required to synchronize availability between different users or different browsers. | Availability changes in one browser are not required to appear in another user’s browser. |
-| FR-019 | After a successful reservation, the user shall be able to start another reservation and return to a state where a new reservation can be created. Starting another reservation shall not discard confirmed availability changes from the current browser session. | The user can begin another reservation; prior confirmed deductions remain visible during that browser session. |
-| FR-020 | The application shall provide a simple, understandable web interface supporting class selection, session selection, availability review, participant selection, reservation review, confirmation, error feedback, confirmation display, and starting another reservation. The exact visual design is unspecified. | A reviewer can complete and inspect the reservation flow and its representative states. |
-| FR-021 | The reservation shall be anonymous. The application shall not require or collect a name, email address, telephone number, postal address, account information, or payment information. | None of the listed personal or account/payment data is requested or collected. |
-| FR-022 | The application shall include only the gym-class reservation functionality described in the BRD; the following are outside scope. | User accounts, authentication, memberships, subscriptions, payment processing, discounts or promotions, database storage, backend or server-side functionality, live multi-user availability, waiting lists, personal-trainer scheduling, cancellation, rescheduling, trainer management, email or SMS confirmation, external calendar integration, external APIs, and complex date or calendar calculations are outside scope. |
+| `name` | text | Class name |
+| `pricePerParticipant` | whole number | Price in euros for one participant |
+| `sessions` | list of Session objects | The class’s three sessions |
 
-## Session inventory
+Each Session object shall contain:
 
-| Class | Price per participant | Session | Initial available places |
-|---|---:|---|---:|
-| Yoga | €8 | Monday 18:00 | 10 |
-| Yoga | €8 | Wednesday 19:00 | 6 |
-| Yoga | €8 | Saturday 10:00 | 2 |
-| Pilates | €10 | Tuesday 18:00 | 8 |
-| Pilates | €10 | Thursday 19:00 | 4 |
-| Pilates | €10 | Saturday 11:30 | 0 |
-| Functional Training | €12 | Monday 19:30 | 5 |
-| Functional Training | €12 | Wednesday 18:00 | 10 |
-| Functional Training | €12 | Friday 18:30 | 3 |
-| Spinning | €11 | Tuesday 19:30 | 7 |
-| Spinning | €11 | Thursday 18:00 | 1 |
-| Spinning | €11 | Sunday 10:00 | 10 |
+| Field | Type | Meaning |
+|---|---|---|
+| `sessionId` | text | Fixed session identifier from the session table in Section 3 |
+| `day` | text | Day of the week in English |
+| `time` | text | Start time in `HH:MM` format |
+| `capacity` | whole number | Maximum capacity; always 10 |
+| `remainingPlaces` | whole number | Current available places |
 
-## Support-case finding
+Example response (shortened to one class and one session):
 
-The reported reset to 6 places after starting another reservation is not expected behavior under FR-016 and FR-019. The BRD requires the confirmed deduction to remain during the current browser session. The reported sequence (6 available, confirm 2, then 4, start another reservation without refreshing or closing the browser, then 6) therefore describes behavior that violates the stated requirement. The client reports reproducing the same result when trying the steps a second time.
+```json
+[
+  {
+    "name": "Yoga",
+    "pricePerParticipant": 8,
+    "sessions": [
+      {
+        "sessionId": "YOGA-2",
+        "day": "Wednesday",
+        "time": "19:00",
+        "capacity": 10,
+        "remainingPlaces": 6
+      }
+    ]
+  }
+]
+```
 
-## Support-task deliverable
+### 5.2 `POST /reservations`
 
-The support case asks for an evidence-based decision to respond that the behavior is expected, request more information, or escalate, and for the resulting text to be prepared for the client support platform. This is a support workflow deliverable, not an application requirement. The supplied documents describe the reported behavior but do not include independent application evidence or a test run, so they do not establish the defect's root cause.
+The request body shall contain:
 
-## Ambiguities and evidence limits
+| Field | Type | Requirement |
+|---|---|---|
+| `sessionId` | text | Required; identifier of the session to reserve |
+| `participants` | whole number | Required; at least 1 and no greater than current remaining places |
 
-- The provided documents establish the expected behavior and describe the observed behavior, but do not include independent application evidence, implementation details, or a test run. The defect’s root cause cannot be determined from these documents alone.
-- The BRD defines reset behavior for refresh/reopening and persistence during the current browser session, but does not further define browser-session lifecycle details. The support case’s specific no-refresh/no-close scenario is clear and is captured in FR-016.
+A valid request creates a `Confirmed` reservation, assigns a unique code, calculates the total, deducts availability, stores the reservation and updated availability, and returns the reservation with status **201**.
+
+The success response shall contain the Reservation fields defined in Section 5.5.
+
+Example request:
+
+```json
+{
+  "sessionId": "YOGA-2",
+  "participants": 2
+}
+```
+
+Example successful response:
+
+```json
+{
+  "code": "GYM-004217",
+  "className": "Yoga",
+  "sessionId": "YOGA-2",
+  "day": "Wednesday",
+  "time": "19:00",
+  "participants": 2,
+  "pricePerParticipant": 8,
+  "totalPrice": 16,
+  "status": "Confirmed"
+}
+```
+
+### 5.3 `GET /reservations/{code}`
+
+Returns the reservation matching the code with status **200**. It does not change stored data.
+
+The response shall contain the Reservation fields defined in Section 5.5. It may return either `Confirmed` or `Cancelled` status.
+
+### 5.4 `DELETE /reservations/{code}`
+
+Cancels the reservation matching the code and returns the updated Reservation with status **200**.
+
+For a reservation currently `Confirmed`, the API shall mark it `Cancelled`, return its places to the session, store both changes, and return the reservation.
+
+A request to cancel a reservation that is already `Cancelled` shall return **409** and make no changes.
+
+### 5.5 Reservation response fields
+
+Responses from `POST /reservations`, `GET /reservations/{code}`, and `DELETE /reservations/{code}` shall contain:
+
+| Field | Type | Meaning |
+|---|---|---|
+| `code` | text | Unique reservation code |
+| `className` | text | Name of the reserved class |
+| `sessionId` | text | Identifier of the reserved session |
+| `day` | text | Day of the reserved session |
+| `time` | text | Start time of the reserved session |
+| `participants` | whole number | Number of reserved participants |
+| `pricePerParticipant` | whole number | Price per participant in euros |
+| `totalPrice` | whole number | Participant count × price per participant, in euros |
+| `status` | text | `Confirmed` or `Cancelled` |
+
+The BRD permits responses to contain additional fields, but responses must contain all fields listed above.
+
+### 5.6 Reservation code
+
+Every confirmed reservation shall receive a unique code in the format `GYM-` followed by exactly six digits. For example: `GYM-004217`.
+
+The code shall be included in the confirmation and used for lookup and cancellation. The BRDs do not specify a code-generation algorithm.
+
+## 6. API errors and validation
+
+When an API operation cannot be completed, it shall return an error with the applicable HTTP status and a readable message. The exact JSON structure of error responses is not prescribed.
+
+The extension BRD states that an operation which cannot be completed returns an error and changes nothing. This is a mandatory API behavior.
+
+| Situation | Status | Example message from the extension BRD |
+|---|---:|---|
+| A required field is missing | 400 | `sessionId is required` |
+| `sessionId` is not text or is empty | 400 | `sessionId must be non-empty text` |
+| `participants` is not a whole number or is below 1 | 400 | `participants must be a whole number of at least 1` |
+| Code does not match `GYM-` followed by 6 digits | 400 | `invalid reservation code` |
+| Session identifier does not exist | 404 | `session not found` |
+| Correctly formatted reservation code does not exist | 404 | `reservation not found` |
+| Participants exceed remaining places, including a full session | 409 | `not enough places available` |
+| Reservation has already been cancelled | 409 | `reservation already cancelled` |
+
+When multiple errors apply, the API shall return the first error according to this order:
+
+1. **400 — Invalid input.**
+2. **404 — Session or reservation not found.**
+3. **409 — Not enough places or reservation already cancelled.**
+
+For example, an unknown session identifier combined with a participant count of zero shall return **400** because invalid input is checked before whether the session exists.
+
+## 7. Persistence and request handling
+
+- Reservations and session availability shall be stored in a file.
+- After a restart, reservations and their statuses shall remain, and availability shall retain the effects of reservations and cancellations.
+- If no data file exists when the application starts, it shall start with the initial availability in Section 3.
+- The application is used by one visitor at a time, and requests are handled one after another. Simultaneous use by several visitors is outside scope.
+
+The extension does not prescribe the file format or the timing of initial file creation.
+
+## 8. Frontend integration
+
+The user interface shall:
+
+- Obtain classes, sessions, prices, and current availability from `GET /classes`.
+- Create reservations through `POST /reservations` only after the visitor explicitly confirms a valid reservation.
+- Show a pre-confirmation summary with class, session, participant count, unit price, and total price.
+- Show the reservation code in the successful confirmation.
+- Allow a visitor to enter a code, look up the reservation, and view all required reservation details and status.
+- Allow a visitor to cancel a reservation by code and show the result.
+- Give clear feedback when an API request cannot be completed, using the error status and readable message.
+- Continue to support starting another reservation after a successful reservation.
+
+The user interface shall display the class, day, and time to visitors; they do not need to see session identifiers.
+
+The exact visual design is unspecified. No personal information, account information, or payment information shall be requested or collected.
+
+## 9. Explicitly out of scope
+
+The following exclusions are stated in the original BRD’s **Section 17** or the extension BRD’s **Section 9**:
+
+| Exclusion | Source |
+|---|---|
+| User accounts | BRD §17; BRD-Extension §9 |
+| Authentication | BRD §17; BRD-Extension §9 |
+| Memberships | BRD §17 |
+| Subscriptions | BRD §17 |
+| Payment processing | BRD §17; BRD-Extension §9 |
+| Discounts or promotions | BRD §17 |
+| Database storage | BRD §17; BRD-Extension §9 |
+| Live multi-user availability | BRD §17 |
+| Simultaneous use by several visitors | BRD-Extension §6 |
+| Waiting lists | BRD §17 |
+| Personal-trainer scheduling | BRD §17 |
+| Cancellation | BRD §17, overridden by BRD-Extension §§1–2 and added in §5 |
+| Rescheduling | BRD §17; BRD-Extension §9 |
+| Trainer management | BRD §17 |
+| Email or SMS confirmation/messages | BRD §17; BRD-Extension §9 |
+| Personal data | BRD-Extension §9 |
+| External calendar integration | BRD §17 |
+| External APIs | BRD §17 |
+| Complex date or calendar calculations | BRD §17 |
+| Reducing the number of participants in an existing reservation | BRD-Extension §9 |
+| Time rules for cancellation | BRD-Extension §9 |
+| Operations for gym staff | BRD-Extension §9 |
+
+The original BRD also excludes backend or server-side functionality in **Section 17**. The extension explicitly overrides that exclusion for the API, stating in **BRD-Extension §2** that server-side functionality (the API) is now in scope. Likewise, cancellation is in scope under the extension despite the original exclusion. File storage is in scope; database storage remains explicitly out of scope.
+
+## 10. Mandatory requirements and open implementation decisions
+
+### Mandatory
+
+The requirements described above are mandatory because they are stated in one or both BRDs, subject to the precedence rule in Section 1. This includes the four API operations, their success statuses and fields, the error statuses and validation order, unique reservation codes, file persistence, lookup, cancellation, and API-based frontend integration.
+
+### Open implementation decisions
+
+The BRDs do **not** prescribe:
+
+- Programming language, framework, or internal project structure.
+- API port or address.
+- File format or internal storage organization.
+- Reservation-code generation algorithm.
+- Exact error-response JSON structure.
+- Whether responses include additional fields; the BRD explicitly permits them.
+- Deployment or hosting arrangements.
+
+These remain implementation decisions. This document does not select among them or add requirements for them.

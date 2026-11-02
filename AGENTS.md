@@ -1,40 +1,41 @@
-# Development Guidelines
+# Development and Assessment Guidance
 
-## Project purpose
+## Sources and scope
 
-Build a small web application for visitors to reserve places in predefined gym classes. Keep the experience simple and suitable for demonstration and review. The implementation includes catalogue data, reservation rules, class/session selection, participant selection, a live reservation summary, and in-memory booking confirmation.
+- Treat the user-approved `REQUIREMENTS.md` as the implementation acceptance baseline.
+- Read `BRD.md` and `BRD-Extension.md`; the extension takes precedence where they conflict. Persistent file storage, server/API behavior, reservation codes, lookup, and cancellation are in scope.
+- Preserve remaining original requirements: catalogue, prices, sessions, capacity, reservation summary, explicit confirmation, participant limits, anonymity, and no payment.
+- Do not add behavior beyond approved requirements. Do not select technologies where the BRDs leave a decision open; request user approval before a decision affects implementation.
 
-## Business rules
+## Existing project
 
-- Offer Yoga (€8/person), Pilates (€10/person), Functional Training (€12/person), and Spinning (€11/person), with the sessions and initial availability listed in `BRD.md` and `REQUIREMENTS.md`.
-- Each session has a capacity of 10. A reservation must contain at least 1 participant and cannot exceed the session's current available places. Full sessions cannot be reserved.
-- Calculate the total as participant count multiplied by the class price. Do not process payment.
-- Require explicit confirmation for valid reservations. Show a useful summary before confirmation and clear success or validation feedback afterward.
-- On confirmation, deduct the reserved places. Keep deductions for the current browser session, including after starting another reservation. Refreshing or reopening restores initial availability; availability need not synchronize across users or browsers.
-- Reservations are anonymous. Do not require or collect personal, account, or payment information.
-- Keep work within the BRD's scope. In particular, do not add accounts, backend or database storage, live multi-user availability, payments, or external integrations unless the requirements are changed.
+- The current app is plain HTML/CSS and browser JavaScript in `index.html`, `css/`, and `js/`. Reuse compatible catalogue, reservation, UI, styling, accessibility, and test code.
+- Browser tests are loaded by `tests/tests.html`. `TEST_PLAN.md` is the project test and traceability guide.
+- Do not assume a build step, dependency manager, or command-line test runner unless confirmed present and approved.
+- Maintain `PLAN.md`, `TASKS.md`, `TEST_PLAN.md`, `PROMPTS.md`, `CHAT_HISTORY.md`, `COMMANDS.md`, and `NEXT_STEPS.md` with factual, nonduplicative information.
 
-## Structure and coding conventions
+## Assessment and task tracking
 
-- The root contains `BRD.md`, `REQUIREMENTS.md`, `Support-Case.md`, `PHASES.txt`, `PROMPTS.md`, `TEST_PLAN.md`, and `index.html`, plus `css/`, `js/`, and `tests/`. Keep the BRD and requirements as sources for business behavior and acceptance criteria; use the phase and prompt records for project history.
-- The implementation uses plain browser JavaScript without a build step or dependencies. No additional formatting or lint configuration is established. Follow the existing code style and avoid assuming tools that are not present.
-- Keep implementation focused on the reservation flow and avoid unnecessary dependencies or unrelated refactoring.
+- Task statuses in `TASKS.md` remain Proposed until the user explicitly approves a status change. Do not infer approval from a review, test run, or implementation.
+- Record AI Review findings and Human Review outcomes in separate fields. Use Pending when no finding or outcome has been provided; never invent one.
+- Record in `PROMPTS.md` only prompts actually used. Preserve its existing history.
+- Record in `COMMANDS.md` only commands actually executed and their purpose; do not record proposed commands as executed.
+- `CHAT_HISTORY.md` is a factual summary of relevant conversation and decisions, not an invented transcript.
+- `NEXT_STEPS.md` reflects observed status, unresolved choices, and upcoming steps; do not claim work or tests are complete without evidence.
 
-## Testing and verification
+## Implementation and verification
 
-- Automated tests run in the browser through `tests/tests.html`; open that file in a browser to run the suite. The application can be opened from `index.html`. There is no Node-based or command-line test runner in the project.
-- Add focused tests for changed behavior and keep the browser test page loading the relevant test files.
-- Use `TEST_PLAN.md` for requirement traceability, manual checks, and known testing limits.
-- Verify changes against the acceptance criteria in `REQUIREMENTS.md`. In particular, test the support-case sequence: Yoga — Wednesday 19:00 starts with 6 places; confirming 2 leaves 4; starting another reservation without refreshing or closing the browser must still show 4. Also verify that refresh/reopening restores initial availability.
-- Check the relevant flow for class/session selection, availability, participant limits, price calculation, summary edits, invalid reservations, confirmation, and starting another reservation.
+- Do not begin application implementation until the user authorizes it and blocking technical choices are approved or deferred.
+- Keep requests sequential for one visitor; do not implement simultaneous multi-visitor behavior.
+- Follow exact API paths, JSON field names/types, status codes, validation order, and error behavior in `REQUIREMENTS.md`.
+- Failed API operations must not change stored reservations or availability.
+- Verify file-backed initialization and reservation/cancellation status after real restarts; a fresh in-memory state is not persistence verification.
+- Update focused tests and regression coverage. Keep the browser test page loading relevant browser tests. Document the actual command/manual route for any approved backend/API test tooling.
+- Test result claims must match observed results. Existing documentation reporting 112 browser tests is not proof that tests were rerun in a later task.
+- Update `TEST_PLAN.md` for extension coverage, known limits, and requirement traceability.
 
-## Change scope
+## Change hygiene
 
-- Make only changes needed for the requested work. Do not modify unrelated files or broaden scope beyond the BRD and approved requirements.
-- Preserve existing user changes. Review the changes made for the task and ensure unrelated files are not included.
-
-## Git practices
-
-- Make small, meaningful commits with messages that describe one logical change.
-- Keep each commit focused; do not include unrelated files or changes.
-- Do not commit unless explicitly requested.
+- Make precise, task-scoped changes. Do not change application source during documentation-only preparation.
+- Preserve existing user changes; inspect worktree changes before editing and verify only intended files changed.
+- Do not delete files or commit unless explicitly requested.

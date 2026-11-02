@@ -136,3 +136,145 @@ Record significant AI prompts used during project development and the resulting 
 > proceed with phase 6
 
 **Resulting change:** Added a persistent polite live region, Confirm descriptions for validation text, and 13 accessibility tests; adjusted light/dark contrast and phone controls; created `TEST_PLAN.md` with traceability, automated inventory, 13 manual checks, and known limits. All 112 browser tests passed in both light and dark themes. Verified the support-case sequence, responsive 390px layout, reduced-motion setting, and absence of browser storage, network requests, and forms in the implementation.
+
+## 9. Assess the API extension and prepare implementation planning
+
+**Purpose:** Compare the existing Gym Reservation application with the BRDs, propose requirements and an implementation plan, and prepare supporting assessment documentation without beginning application implementation.
+
+**Prompts used during this assessment (verbatim):**
+
+### Analyze current application
+
+> Analyze the existing Gym Reservation application.
+>
+> Read the entire project structure, source code, existing tests, and current documentation.
+>
+> Compare the implementation against:
+>
+> - BRD.md
+> - BRD-Extension.md
+>
+> Your task is to produce an analysis report only.
+>
+> Identify:
+>
+> 1. Existing application architecture and technologies.
+> 2. Currently implemented functionality.
+> 3. Existing test coverage.
+> 4. Functionality that already satisfies the original BRD.
+> 5. Gaps introduced by BRD-Extension.md.
+> 6. Existing code that can be reused.
+> 7. Potential risks or architectural considerations for extending the application.
+> Do not modify, create, or delete any files.
+> Do not implement anything.
+> Do not make assumptions where the source documents are silent.
+>
+> Present the findings in a structured report.
+
+### Prepare a proposed requirements document
+
+> Using the analysis you just completed, together with BRD.md and BRD-Extension.md, prepare a complete proposed REQUIREMENTS.md for the Gym Reservation API extension.
+>
+> Requirements:
+>
+> 1. Preserve all original BRD requirements that are not overridden by the extension.
+> 2. Apply BRD-Extension.md wherever it extends or overrides the original BRD.
+> 3. Specify all four REST endpoints and their exact contracts.
+> 4. Include reservation code format and uniqueness.
+> 5. Include file persistence and restart behavior.
+> 6. Include reservation lookup and cancellation.
+> 7. Include all HTTP status codes, validation rules, and validation order.
+> 8. Include frontend integration requirements.
+> 9. Include explicit out-of-scope items.
+> 10. Clearly distinguish mandatory BRD requirements from implementation decisions that remain open.
+> Do not invent requirements or select technologies that are not specified in the BRDs.
+>
+> Do not modify any files.
+>
+> Present the complete proposed document for human review and approval.
+
+### Propose implementation plan
+
+> Now that REQUIREMENTS.md has been reviewed and approved, prepare a proposed implementation plan for the Gym Reservation API Extension.
+>
+> First inspect:
+>
+> - REQUIREMENTS.md
+> - BRD.md
+> - BRD-Extension.md
+> - The existing project structure and source code
+> - Any existing PLAN.md, TASKS.md, AGENTS.md, and other project guidance files
+> Create a phased implementation plan that:
+>
+> 1. Covers every mandatory requirement in REQUIREMENTS.md.
+> 2. Reuses the existing application where appropriate.
+> 3. Identifies the backend/API and file-persistence work.
+> 4. Covers frontend integration.
+> 5. Includes testing, regression testing, and persistence verification after restart.
+> 6. Defines clear acceptance criteria for each phase.
+> 7. Identifies dependencies and implementation decisions that are not specified in the BRDs.
+> Do not start implementation.
+> Do not modify or create any files.
+> Do not invent additional requirements.
+>
+> Return the complete proposed PLAN.md content and identify any assumptions or decisions that require my approval.
+
+### Add assessment tracking to the proposed plan
+
+> The proposed PLAN.md is generally good. Please revise it to include the project documentation and assessment tracking deliverables.
+>
+> Add explicit work for:
+>
+> 1. Creating and maintaining TASKS.md, with individual tasks, acceptance criteria, status, AI Review findings, and Human Review outcomes.
+> 2. Creating and maintaining PROMPTS.md to record the prompts used during the assessment.
+> 3. Creating CHAT_HISTORY.md to preserve the relevant conversation history and key project decisions.
+> 4. Creating COMMANDS.md containing only commands actually executed, with their purpose.
+> 5. Creating NEXT_STEPS.md to track the current status and upcoming steps.
+> Ensure that task status changes require my approval.
+>
+> Do not change the technical scope or introduce new application requirements.
+>
+> Return the complete revised PLAN.md proposal only. Do not create or modify any files.
+
+### Prepare project documentation and development setup
+
+> Work in Agent mode. Prepare the project documentation and development setup for the full assessment, using the existing BRD.md, BRD-Extension.md, AGENTS.md, REQUIREMENTS.md, TEST_PLAN.md, PROMPTS.md and the existing application as the source of truth.
+>
+> **1. Create these three new files:**
+>
+> - `CHAT_HISTORY.md` – summarize the relevant conversation history, decisions, approved requirements, and assessment instructions. Do not invent conversations or decisions.
+> - `COMMANDS.md` – record only commands that have actually been executed, with a short explanation of their purpose. Do not list commands that were merely suggested.
+> - `NEXT_STEPS.md` – provide the current project status, remaining preparation work, implementation phases, and immediate next actions.
+>
+> **2. Update existing documentation:**
+>
+> - `PLAN.md` – create or update the complete implementation plan based on the approved requirements and assessment process.
+> - `TASKS.md` – create a detailed task breakdown with individual tasks, acceptance criteria, dependencies, and proposed statuses. Include separate fields for AI Review findings and Human Review outcomes.
+> - `REQUIREMENTS.md` – verify it against the original BRD and extension. Preserve the approved requirements and examples. Only correct genuine inconsistencies or omissions, and report any proposed changes.
+> - `TEST_PLAN.md` – update test coverage for all API endpoints, validation, persistence, reservation lookup, cancellation, availability restoration, restart behavior, and regression testing.
+> - `AGENTS.md` – update project guidance for the implementation workflow, testing, documentation, and assessment rules.
+> - `PROMPTS.md` – preserve existing content and add the prompts actually used during this assessment. Do not invent prompts.
+>
+> **3. Project preparation:**
+>
+> - Inspect the existing application, scripts, tests, and available runtime.
+> - Identify technical decisions that must be made before implementation, including backend technology, API port, file storage format/location, and test tooling.
+> - Do not arbitrarily choose technologies where a decision is still required. Document recommendations and unresolved decisions.
+> - Prepare a clear implementation sequence so that each phase can be executed and tested independently.
+> - Ensure the plan covers the complete extension, including persistent storage, REST API, frontend integration, reservation lookup, and cancellation.
+>
+> **4. Important restrictions:**
+>
+> - Do not start implementing application functionality yet.
+> - Do not modify existing application source code.
+> - Do not delete existing files.
+> - Do not invent test results, completed tasks, AI Review findings, or Human Review approvals.
+> - Keep task statuses as Proposed until explicitly approved.
+> - Preserve existing useful documentation and avoid duplicating content unnecessarily.
+>
+> **5. Final report:**
+> List every file created or updated, summarize the changes, identify unresolved technical decisions, and state whether the project is ready to begin Phase 1.
+>
+> Complete the documentation preparation in one pass rather than stopping after each file.
+
+**Resulting change:** Created `PLAN.md`, `TASKS.md`, `CHAT_HISTORY.md`, `COMMANDS.md`, and `NEXT_STEPS.md`; updated `TEST_PLAN.md`, `AGENTS.md`, and this prompt record. Marked the already user-approved `REQUIREMENTS.md` status accordingly; no requirement content or application source code was changed. Runtime availability and open technical decisions are documented. No tests were run as part of this preparation.

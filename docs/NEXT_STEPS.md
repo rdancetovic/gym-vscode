@@ -12,7 +12,7 @@
 
 ## Remaining work
 
-1. Continue with the next separately authorized API task, respecting its dependencies (API-05 contract verification, API-06 lookup, or API-07 cancellation).
+1. Analyze API-06 (`GET /reservations/{code}`) scope and acceptance criteria before implementation.
 2. Keep task statuses Proposed unless the user explicitly approves a status change.
 3. Keep task and review records factual; do not treat implementation or tests as task-status or review approval.
 
@@ -21,7 +21,7 @@
 Based on the prerequisites in `TASKS.md` and the implementation evidence above:
 
 - **API-04 (`GET /classes`)** depends on API-01 and API-02 and is implemented with passing HTTP tests.
-- **API-05 (POST contract verification)** depends on API-03, whose reservation-create handler is implemented.
+- **API-05 (POST contract verification)** depends on API-03 and was verified against its acceptance criteria; no gaps were identified.
 - **API-06 (reservation lookup)** and **API-07 (cancellation)** each depend on API-02 and API-03.
 - **UI-01** depends on API-04, API-05, and PREP-02. **UI-02** depends on UI-01 and API-05.
 - **API-08** depends on API-04 through API-07. **UI-03** depends on API-06 and PREP-02; **UI-04** depends on API-07 and UI-03.
@@ -48,6 +48,6 @@ See `PLAN.md` for phase-level work and acceptance criteria; see `TASKS.md` for t
 
 ## Immediate next actions
 
-1. Obtain authorization for a remaining task, such as API-05, API-06, or API-07, subject to its recorded dependencies.
+1. Complete the requested API-06 analysis; implementation remains subject to separate authorization.
 2. Review implementation choices not prescribed by the BRDs, including API error JSON shape and the selected 500/503 responses for persistence failure/code exhaustion.
 3. Obtain explicit user approval for any task-status transition.

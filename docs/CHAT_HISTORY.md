@@ -50,3 +50,11 @@ This file summarizes relevant conversation decisions for the Gym Reservation API
 - Added `ClassesApiHandlerTest` for all four classes and twelve sessions, exact fields/types and catalogue data, capacity 10, initial availability, persisted confirmed/cancelled state fixtures, response status/content type, in-memory and file non-mutation, and method/path behavior. The API-04 tests use saved state fixtures rather than making API-03 or API-07 requests.
 - The final Java run passed 58 API-01, 21 API-02, 51 API-03, and 250 API-04 assertions. An initial API-04 test run exposed an incorrect expected-capacity value in the new test fixture; that fixture was corrected and the complete Java run passed afterward.
 - `git diff --check` passed. No frontend or documentation files were changed during API-04 implementation. Task statuses and review fields remain unchanged and Proposed/Pending.
+
+## API-05 verification
+
+- The user requested verification and completion of API-05 only, explicitly noting that `POST /reservations` already exists from API-03 and should not be duplicated or rewritten.
+- Compared the existing `ReservationApiHandler` and `ReservationApiHandlerTest` with the API-05 task criteria and `REQUIREMENTS.md`. No implementation or test gaps were identified; no Java source or test files were modified.
+- Recompiled all Java server and test sources and ran the existing Java test mains. Current-session results: API-01 **58 assertions passed**, API-02 **21**, API-03 **51**, and API-04 **250**. `git diff --check` passed.
+- No task status, AI Review finding, or Human Review outcome was changed.
+- The next requested analysis step is API-06.

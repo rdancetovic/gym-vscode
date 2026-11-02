@@ -85,3 +85,17 @@ git diff --check; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git status --
 ```
 
 Checked whitespace and listed changed files after API-04 implementation.
+
+## API-05 verification
+
+```powershell
+$buildDir = Join-Path $env:TEMP 'gym-vscode-api05-verify'; New-Item -ItemType Directory -Force -Path $buildDir | Out-Null; javac -d $buildDir server\*.java tests\java\*.java; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $testClasses = @('GymReservationDomainTest', 'ReservationStateStoreTest', 'ReservationApiHandlerTest', 'ClassesApiHandlerTest'); foreach ($testClass in $testClasses) { java -cp $buildDir $testClass; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE } }
+```
+
+Recompiled all Java sources and ran the existing Java test mains to verify API-05 without changing source or tests. Observed: API-01 **58**, API-02 **21**, API-03 **51**, and API-04 **250** assertions passed.
+
+```powershell
+git status --short; git diff --check; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Write-Output 'No worktree changes detected.'
+```
+
+Checked the worktree and whitespace after API-05 verification; no worktree changes were present at that point.

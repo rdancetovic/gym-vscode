@@ -8,19 +8,20 @@
 
 :root {
   color-scheme: light;
-  --page: #eef3f0;
+  --page: #f1f3fc;
   --surface: #ffffff;
-  --surface-soft: #f5f8f6;
-  --ink: #182d2a;
-  --muted: #5c6b67;
-  --line: #d6e0dc;
-  --green: #28675b;
-  --green-dark: #174b42;
+  --surface-soft: #f7f7fc;
+  --ink: #241d38;
+  --muted: #625c75;
+  --line: #dedbec;
+  --blue: #3659c9;
+  --blue-dark: #273f91;
+  --blue-soft: #eaf0ff;
+  --purple: #654789;
+  --purple-dark: #35204f;
   --orange: #b64f31;
   --orange-soft: #fff0e9;
-  --blue: #42688d;
-  --blue-soft: #edf4fb;
-  --shadow: 0 18px 48px rgba(23, 59, 51, 0.08);
+  --shadow: 0 18px 48px rgba(42, 34, 79, 0.09);
 }
 
 html {
@@ -33,7 +34,8 @@ body {
   color: var(--ink);
   font-family: "Trebuchet MS", "Segoe UI", sans-serif;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.78), transparent 48%),
+    radial-gradient(ellipse at 12% 0%, rgba(73, 105, 211, 0.1), transparent 38%),
+    radial-gradient(ellipse at 91% 13%, rgba(91, 56, 128, 0.08), transparent 34%),
     var(--page);
 }
 
@@ -68,7 +70,7 @@ body {
   place-items: center;
   border-radius: 8px;
   color: #fff;
-  background: var(--green-dark);
+  background: var(--blue);
   font: 700 21px/1 Georgia, "Palatino Linotype", serif;
 }
 
@@ -89,7 +91,7 @@ body {
 .header-note span,
 .intro-note span {
   padding: 0 7px;
-  color: var(--orange);
+  color: var(--purple);
 }
 
 .intro {
@@ -98,7 +100,7 @@ body {
 
 .eyebrow {
   margin: 0 0 12px;
-  color: var(--green);
+  color: var(--blue-dark);
 }
 
 h1 {
@@ -167,7 +169,7 @@ h1 {
 
 .step-label {
   margin-right: 9px;
-  color: var(--orange);
+  color: var(--purple);
   vertical-align: 1px;
 }
 
@@ -207,19 +209,19 @@ h1 {
 
 .class-option:hover .class-surface,
 .session-option:hover .session-surface {
-  border-color: var(--green);
+  border-color: var(--blue);
   transform: translateY(-1px);
 }
 
 .class-option.is-selected .class-surface {
-  border: 2px solid var(--green);
+  border: 2px solid var(--blue);
   padding: 13px;
-  background: #f4faf7;
+  background: var(--blue-soft);
 }
 
 .class-option input:focus-visible + .class-surface,
 .session-option input:focus-visible + .session-surface {
-  outline: 3px solid #d78258;
+  outline: 3px solid var(--blue);
   outline-offset: 3px;
 }
 
@@ -272,9 +274,9 @@ h1 {
 }
 
 .session-option.is-selected .session-surface {
-  border-color: var(--green);
-  background: #f4faf7;
-  box-shadow: inset 3px 0 var(--green);
+  border-color: var(--blue);
+  background: var(--blue-soft);
+  box-shadow: inset 3px 0 var(--blue);
 }
 
 .session-main {
@@ -297,8 +299,8 @@ h1 {
   flex: 0 0 auto;
   padding: 6px 9px;
   border-radius: 4px;
-  color: var(--green-dark);
-  background: #e9f3ef;
+  color: var(--blue-dark);
+  background: var(--blue-soft);
   font-size: 11px;
   font-weight: 800;
 }
@@ -324,7 +326,7 @@ h1 {
 
 .session-option.is-full .session-status {
   color: var(--muted);
-  background: #e7ece9;
+  background: var(--line);
 }
 
 .no-class-message,
@@ -413,7 +415,7 @@ h1 {
 .participant-control input:focus-visible,
 .participant-control button:focus-visible,
 .confirm-button:focus-visible {
-  outline: 3px solid #d78258;
+  outline: 3px solid var(--blue);
   outline-offset: 3px;
 }
 
@@ -463,7 +465,7 @@ h1 {
 }
 
 .summary-grid .summary-total dd {
-  color: var(--green-dark);
+  color: var(--purple-dark);
   font-size: 19px;
 }
 
@@ -475,8 +477,8 @@ h1 {
 }
 
 .reservation-status.is-valid {
-  color: #205d42;
-  background: #e7f4eb;
+  color: var(--blue-dark);
+  background: var(--blue-soft);
 }
 
 .reservation-status.is-invalid {
@@ -504,19 +506,19 @@ h1 {
   border: 0;
   border-radius: 6px;
   color: #fff;
-  background: var(--green-dark);
+  background: var(--purple-dark);
   font: 700 13px/1 "Trebuchet MS", "Segoe UI", sans-serif;
   cursor: pointer;
 }
 
 .confirm-button:disabled {
-  color: #f4f7f5;
-  background: #52645e;
+  color: #f7f5fb;
+  background: #625d70;
   cursor: not-allowed;
 }
 
 .phase-note {
-  color: var(--green);
+  color: var(--blue-dark);
   font-weight: 700;
 }
 
@@ -571,7 +573,7 @@ h1 {
 }
 
 .lookup-field input:focus-visible {
-  outline: 3px solid #d78258;
+  outline: 3px solid var(--blue);
   outline-offset: 2px;
 }
 
@@ -626,7 +628,7 @@ h1 {
 
 .confirmation-eyebrow {
   margin: 0 0 10px;
-  color: var(--green);
+  color: var(--blue-dark);
   font-size: 10px;
   font-weight: 800;
 }
@@ -672,7 +674,7 @@ h1 {
 
 .confirmation-availability {
   margin: 18px 0 0;
-  color: var(--green);
+  color: var(--blue-dark);
   font-size: 14px;
   font-weight: 800;
 }
@@ -686,37 +688,41 @@ h1 {
 @media (prefers-color-scheme: dark) {
   :root {
     color-scheme: dark;
-    --page: #172321;
-    --surface: #22312e;
-    --surface-soft: #1e2b28;
-    --ink: #edf4f1;
-    --muted: #afbfba;
-    --line: #3c504b;
-    --green: #76b9a3;
-    --green-dark: #9bd1bd;
+    --page: #171526;
+    --surface: #211f33;
+    --surface-soft: #1d1b2d;
+    --ink: #f3f1fc;
+    --muted: #b9b3ca;
+    --line: #3d3855;
+    --blue: #9eafff;
+    --blue-dark: #c0caff;
+    --blue-soft: #292e49;
+    --purple: #c5a9ee;
+    --purple-dark: #c4afea;
     --orange: #ee9c78;
     --orange-soft: #3a2924;
-    --blue: #91b5d4;
-    --blue-soft: #263442;
-    --shadow: 0 18px 48px rgba(0, 0, 0, 0.18);
+    --shadow: 0 18px 48px rgba(0, 0, 0, 0.24);
   }
 
   body {
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.025), transparent 48%), var(--page);
+    background:
+      radial-gradient(ellipse at 12% 0%, rgba(104, 126, 238, 0.12), transparent 38%),
+      radial-gradient(ellipse at 91% 13%, rgba(146, 97, 190, 0.1), transparent 34%),
+      var(--page);
   }
 
-  .wordmark-mark { color: #12231f; background: #9bd1bd; }
-  .confirm-button { color: #12382f; }
-  .confirm-button:disabled { color: #f4f7f5; }
-  .reservation-status.is-valid { color: #b8e7c9; background: #263e31; }
+  .wordmark-mark { color: #171526; background: #9eafff; }
+  .confirm-button { color: #241832; }
+  .confirm-button:disabled { color: #f7f5fb; background: #625d70; }
+  .reservation-status.is-valid { color: #d0d8ff; background: #292e49; }
   .reservation-status.is-invalid { color: #ffe0aa; background: #463825; }
   .api-feedback { color: #ffe0aa; background: #463825; }
-  .confirmation-availability { color: #a9dbc6; }
+  .confirmation-availability { color: #c0caff; }
   .class-option.is-selected .class-surface,
-  .session-option.is-selected .session-surface { background: #243b35; }
-  .session-status { color: #c5eadb; background: #2e4941; }
+  .session-option.is-selected .session-surface { background: var(--blue-soft); }
+  .session-status { color: #d0d8ff; background: #303858; }
   .session-option.is-low-availability .session-status { color: #ffe1ac; background: #4b3d2b; }
-  .session-option.is-full .session-status { color: #c0cbc7; background: #374440; }
+  .session-option.is-full .session-status { color: #d1cde0; background: #39354b; }
   .no-places-message { color: #ffc1a8; }
 }
 

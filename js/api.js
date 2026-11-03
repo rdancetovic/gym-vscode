@@ -41,7 +41,7 @@
     return Number.isInteger(value) && value >= 0;
   }
 
-  function validateReservation(reservation, confirmedOnly) {
+  function validateReservation(reservation, expectedStatus) {
     if (!reservation || typeof reservation !== "object"
         || typeof reservation.code !== "string" || !/^GYM-[0-9]{6}$/.test(reservation.code)
         || typeof reservation.className !== "string" || reservation.className.trim() === ""
@@ -52,7 +52,7 @@
         || !isWholeNumber(reservation.pricePerParticipant)
         || !isWholeNumber(reservation.totalPrice)
         || (reservation.status !== "Confirmed" && reservation.status !== "Cancelled")
-        || (confirmedOnly && reservation.status !== "Confirmed")) {
+        || (expectedStatus && reservation.status !== expectedStatus)) {
       throw new Error("The reservation response is missing required fields or has invalid field types.");
     }
     return reservation;
@@ -71,7 +71,7 @@
       },
       body: JSON.stringify(requestBody)
     });
-    return validateReservation(body, true);
+    return validateReservation(body, "Confirmed");
   }
 
   async function getReservation(code) {
@@ -79,13 +79,22 @@
       method: "GET",
       headers: { Accept: "application/json" }
     });
-    return validateReservation(body, false);
+    return validateReservation(body);
+  }
+
+  async function cancelReservation(code) {
+    const body = await request("/reservations/" + encodeURIComponent(code), {
+      method: "DELETE",
+      headers: { Accept: "application/json" }
+    });
+    return validateReservation(body, "Cancelled");
   }
 
   global.GymApi = Object.freeze({
     ApiError: ApiError,
     getClasses: getClasses,
     createReservation: createReservation,
-    getReservation: getReservation
+    getReservation: getReservation,
+    cancelReservation: cancelReservation
   });
 })(globalThis);

@@ -284,6 +284,31 @@
       }
     });
 
+    it("sends cancellation to the documented code path and requires Cancelled status", async function () {
+      const originalFetch = globalThis.fetch;
+      const calls = [];
+      globalThis.fetch = async function (path, options) {
+        calls.push({ path: path, options: options });
+        return {
+          ok: true,
+          status: 200,
+          json: async function () {
+            const cancelled = reservationResponse("YOGA-2");
+            cancelled.status = "Cancelled";
+            return cancelled;
+          }
+        };
+      };
+      try {
+        const cancelled = await GymApi.cancelReservation("GYM-004217");
+        assert.equal(calls[0].path, "/reservations/GYM-004217");
+        assert.equal(calls[0].options.method, "DELETE");
+        assert.equal(cancelled.status, "Cancelled");
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
     it("looks up and displays every field for a confirmed reservation", async function () {
       const found = Object.assign(reservationResponse("YOGA-2"), {
         pricePerParticipant: 8,
@@ -359,11 +384,13 @@
     it("displays a cancelled reservation and its status", async function () {
       const cancelled = reservationResponse("YOGA-2");
       cancelled.status = "Cancelled";
+      let cancellationRequests = 0;
       await withHost(async function (host) {
         const handle = await GymApp.start(host, {
           getClasses: async function () { return apiCatalogue(); },
           createReservation: async function () { throw new Error("not expected"); },
-          getReservation: async function () { return cancelled; }
+          getReservation: async function () { return cancelled; },
+          cancelReservation: async function () { cancellationRequests += 1; }
         });
         try {
           host.querySelector("[data-lookup-code]").value = "GYM-004217";
@@ -371,10 +398,129 @@
           await waitForUi();
           assert.equal(host.querySelector("[data-lookup-result-status]").textContent, "Cancelled");
           assert.equal(host.querySelector("[data-lookup-result-code]").textContent, "GYM-004217");
+          assert.isTrue(host.querySelector("[data-cancel-reservation]").hidden);
+          assert.equal(cancellationRequests, 0);
         } finally {
           handle.destroy();
         }
       });
+    });
+
+    it("cancels a confirmed reservation once and refreshes session availability", async function () {
+      const initialClasses = apiCatalogue();
+      initialClasses[0].sessions[1].remainingPlaces = 4;
+      const cancelled = Object.assign(reservationResponse("YOGA-2"), { status: "Cancelled" });
+      let classesRequests = 0;
+      let cancellationRequests = 0;
+      let resolveCancellation;
+      await withHost(async function (host) {
+        const handle = await GymApp.start(host, {
+          getClasses: async function () {
+            classesRequests += 1;
+            return classesRequests === 1 ? initialClasses : apiCatalogue();
+          },
+          createReservation: async function () { throw new Error("not expected"); },
+          getReservation: async function () { return reservationResponse("YOGA-2"); },
+          cancelReservation: function (code) {
+            assert.equal(code, "GYM-004217");
+            cancellationRequests += 1;
+            return new Promise(function (resolve) { resolveCancellation = resolve; });
+          }
+        });
+        try {
+          host.querySelector("[data-lookup-code]").value = "GYM-004217";
+          host.querySelector("[data-lookup-form]").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+          await waitForUi();
+          const cancelButton = host.querySelector("[data-cancel-reservation]");
+          assert.isFalse(cancelButton.hidden);
+          cancelButton.click();
+          assert.isTrue(cancelButton.disabled);
+          assert.equal(cancelButton.textContent, "Cancelling…");
+          cancelButton.dispatchEvent(new Event("click", { bubbles: true }));
+          assert.equal(cancellationRequests, 1);
+          resolveCancellation(cancelled);
+          await waitForUi();
+
+          assert.equal(host.querySelector("[data-lookup-result-status]").textContent, "Cancelled");
+          assert.isTrue(host.querySelector("[data-cancel-reservation]").hidden);
+          assert.isTrue(host.querySelector("[data-lookup-feedback]").textContent.includes("was cancelled"));
+          assert.equal(classesRequests, 2);
+          host.querySelector('[data-class-list] input[value="yoga"]').click();
+          assert.isTrue(host.querySelector('[data-session-content] input[value="YOGA-WEDNESDAY-1900"]').parentElement.textContent.includes("6 places left"));
+        } finally {
+          handle.destroy();
+        }
+      });
+    });
+
+    it("updates confirmation-screen availability after cancellation", async function () {
+      const initialClasses = apiCatalogue();
+      initialClasses[0].sessions[1].remainingPlaces = 4;
+      const booking = Object.assign(reservationResponse("YOGA-WEDNESDAY-1900"), {
+        participants: 1,
+        pricePerParticipant: 8,
+        totalPrice: 8
+      });
+      const cancelled = Object.assign(booking, { status: "Cancelled" });
+      let classesRequests = 0;
+      await withHost(async function (host) {
+        const handle = await GymApp.start(host, {
+          getClasses: async function () {
+            classesRequests += 1;
+            return classesRequests < 3 ? initialClasses : apiCatalogue();
+          },
+          createReservation: async function () { return Object.assign({}, booking, { status: "Confirmed" }); },
+          getReservation: async function () { return Object.assign({}, booking, { status: "Confirmed" }); },
+          cancelReservation: async function () { return cancelled; }
+        });
+        try {
+          host.querySelector('[data-class-list] input[value="yoga"]').click();
+          host.querySelector('[data-session-content] input[value="YOGA-WEDNESDAY-1900"]').click();
+          host.querySelector("[data-confirm]").click();
+          await waitForUi();
+          assert.isTrue(host.querySelector("[data-confirmation-availability]").textContent.includes("4 places left"));
+
+          host.querySelector("[data-lookup-code]").value = "GYM-004217";
+          host.querySelector("[data-lookup-form]").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+          await waitForUi();
+          host.querySelector("[data-cancel-reservation]").click();
+          await waitForUi();
+
+          assert.isTrue(host.querySelector("[data-confirmation-availability]").textContent.includes("6 places left"));
+        } finally {
+          handle.destroy();
+        }
+      });
+    });
+
+    it("reports cancellation 404 and 409 API errors without changing the displayed reservation", async function () {
+      const cases = [
+        { status: 404, message: "reservation not found" },
+        { status: 409, message: "reservation already cancelled" }
+      ];
+      for (const testCase of cases) {
+        await withHost(async function (host) {
+          const handle = await GymApp.start(host, {
+            getClasses: async function () { return apiCatalogue(); },
+            createReservation: async function () { throw new Error("not expected"); },
+            getReservation: async function () { return reservationResponse("YOGA-2"); },
+            cancelReservation: async function () { throw new GymApi.ApiError(testCase.status, testCase.message); }
+          });
+          try {
+            host.querySelector("[data-lookup-code]").value = "GYM-004217";
+            host.querySelector("[data-lookup-form]").dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            await waitForUi();
+            host.querySelector("[data-cancel-reservation]").click();
+            await waitForUi();
+            assert.isTrue(host.querySelector("[data-lookup-feedback]").textContent.includes("HTTP " + testCase.status));
+            assert.isTrue(host.querySelector("[data-lookup-feedback]").textContent.includes(testCase.message));
+            assert.equal(host.querySelector("[data-lookup-result-status]").textContent, "Confirmed");
+            assert.isFalse(host.querySelector("[data-cancel-reservation]").disabled);
+          } finally {
+            handle.destroy();
+          }
+        });
+      }
     });
   });
 })();

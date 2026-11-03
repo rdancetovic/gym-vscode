@@ -18,6 +18,8 @@
     let apiFeedback = "";
     let availabilityRefreshError = "";
     let lookupPending = false;
+    let cancellationPending = false;
+    let lastLookup = null;
 
     root.innerHTML = [
       '<div data-reservation-form>',
@@ -86,6 +88,7 @@
       '      <div><dt>Total</dt><dd data-lookup-result-total></dd></div>',
       '      <div><dt>Status</dt><dd data-lookup-result-status></dd></div>',
       '    </dl>',
+      '    <button class="confirm-button" type="button" data-cancel-reservation hidden>Cancel reservation</button>',
       '  </section>',
       '</section>',
       '<p class="visually-hidden" data-live-region aria-live="polite" aria-atomic="true"></p>'
@@ -107,6 +110,7 @@
     const lookupSubmitButton = root.querySelector("[data-lookup-submit]");
     const lookupFeedback = root.querySelector("[data-lookup-feedback]");
     const lookupResult = root.querySelector("[data-lookup-result]");
+    const cancelLookupButton = root.querySelector("[data-cancel-reservation]");
 
     function createClassOption(gymClass, index) {
       const label = document.createElement("label");
@@ -373,7 +377,7 @@
       return remaining + (remaining === 1 ? " place left in this session." : " places left in this session.");
     }
 
-    function updateConfirmationAvailability() {
+    function updateConfirmationAvailability(announce) {
       confirmationContent.querySelector("[data-confirmation-availability]").textContent =
         availabilityRefreshing
           ? "Refreshing availability…"
@@ -388,7 +392,7 @@
       newReservationButton.textContent = availabilityRefreshing
         ? "Refreshing availability…"
         : "Make another reservation";
-      announceStatus();
+      if (announce !== false) announceStatus();
     }
 
     async function submitReservation() {
@@ -447,12 +451,28 @@
       }
     }
 
+    function renderLookupReservation(found) {
+      lastLookup = found;
+      root.querySelector("[data-lookup-result-code]").textContent = found.code;
+      root.querySelector("[data-lookup-result-class]").textContent = found.className;
+      root.querySelector("[data-lookup-result-session]").textContent = found.day + " " + found.time;
+      root.querySelector("[data-lookup-result-participants]").textContent = String(found.participants);
+      root.querySelector("[data-lookup-result-unit-price]").textContent = reservation.formatPrice(found.pricePerParticipant);
+      root.querySelector("[data-lookup-result-total]").textContent = reservation.formatPrice(found.totalPrice);
+      root.querySelector("[data-lookup-result-status]").textContent = found.status;
+      cancelLookupButton.hidden = found.status !== "Confirmed";
+      cancelLookupButton.disabled = cancellationPending;
+      cancelLookupButton.textContent = cancellationPending ? "Cancelling…" : "Cancel reservation";
+      lookupResult.hidden = false;
+    }
+
     async function submitLookup(event) {
       event.preventDefault();
-      if (lookupPending) return;
+      if (lookupPending || cancellationPending) return;
 
       const code = lookupCodeInput.value.trim();
       lookupResult.hidden = true;
+      lastLookup = null;
       lookupFeedback.textContent = "";
       lookupFeedback.hidden = true;
       if (!/^GYM-[0-9]{6}$/.test(code)) {
@@ -472,14 +492,7 @@
       lookupSubmitButton.textContent = "Searching…";
       try {
         const found = await apiClient.getReservation(code);
-        root.querySelector("[data-lookup-result-code]").textContent = found.code;
-        root.querySelector("[data-lookup-result-class]").textContent = found.className;
-        root.querySelector("[data-lookup-result-session]").textContent = found.day + " " + found.time;
-        root.querySelector("[data-lookup-result-participants]").textContent = String(found.participants);
-        root.querySelector("[data-lookup-result-unit-price]").textContent = reservation.formatPrice(found.pricePerParticipant);
-        root.querySelector("[data-lookup-result-total]").textContent = reservation.formatPrice(found.totalPrice);
-        root.querySelector("[data-lookup-result-status]").textContent = found.status;
-        lookupResult.hidden = false;
+        renderLookupReservation(found);
       } catch (error) {
         lookupFeedback.textContent = errorMessage(error);
         lookupFeedback.hidden = false;
@@ -488,6 +501,58 @@
         lookupCodeInput.disabled = false;
         lookupSubmitButton.disabled = false;
         lookupSubmitButton.textContent = "Look up reservation";
+      }
+    }
+
+    async function cancelLookupReservation() {
+      if (cancellationPending || !lastLookup || lastLookup.status !== "Confirmed") return;
+      if (typeof apiClient.cancelReservation !== "function") {
+        lookupFeedback.textContent = "Reservation cancellation is unavailable.";
+        lookupFeedback.hidden = false;
+        return;
+      }
+
+      cancellationPending = true;
+      lookupCodeInput.disabled = true;
+      lookupSubmitButton.disabled = true;
+      cancelLookupButton.disabled = true;
+      cancelLookupButton.textContent = "Cancelling…";
+      lookupFeedback.textContent = "";
+      lookupFeedback.hidden = true;
+      const code = lastLookup.code;
+      try {
+        const cancelled = await apiClient.cancelReservation(code);
+        renderLookupReservation(cancelled);
+        lookupFeedback.textContent = "Reservation " + cancelled.code + " was cancelled.";
+        lookupFeedback.hidden = false;
+
+        if (typeof apiClient.loadClasses !== "function") {
+          lookupFeedback.textContent += " Availability could not be refreshed.";
+          return;
+        }
+        try {
+          const refreshedState = data.createStateFromApi(await apiClient.loadClasses());
+          refreshedState.bookings = currentState.bookings;
+          currentState = refreshedState;
+          availabilityRefreshError = "";
+          if (screen === "confirmation" && lastBooking) {
+            updateConfirmationAvailability(false);
+          } else {
+            render();
+          }
+          lookupFeedback.textContent = "Reservation " + cancelled.code + " was cancelled. Availability has been refreshed.";
+        } catch (error) {
+          lookupFeedback.textContent = "Reservation " + cancelled.code + " was cancelled, but availability could not be refreshed: " +
+            errorMessage(error);
+        }
+      } catch (error) {
+        lookupFeedback.textContent = errorMessage(error);
+        lookupFeedback.hidden = false;
+      } finally {
+        cancellationPending = false;
+        lookupCodeInput.disabled = false;
+        lookupSubmitButton.disabled = false;
+        if (lastLookup) renderLookupReservation(lastLookup);
       }
     }
 
@@ -535,6 +600,10 @@
 
     function handleClick(event) {
       const target = event.target;
+      if (target.matches("[data-cancel-reservation]")) {
+        if (!target.disabled) cancelLookupReservation();
+        return;
+      }
       if (screen === "confirmation" && target.matches("[data-new-reservation]")) {
         startAnotherReservation();
         return;

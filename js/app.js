@@ -55,6 +55,9 @@
         },
         getReservation: typeof apiClient.getReservation === "function"
           ? function (code) { return apiClient.getReservation(code); }
+          : null,
+        cancelReservation: typeof apiClient.cancelReservation === "function"
+          ? function (code) { return apiClient.cancelReservation(code); }
           : null
       });
       return app;

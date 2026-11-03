@@ -10,8 +10,11 @@
     "SPINNING-2": 1,
     "SPINNING-3": 10,
     "YOGA-1": 10,
-    "YOGA-2": 6,
+    "YOGA-2": 2,
     "YOGA-3": 2
   },
-  "reservations": []
+  "reservations": [
+    {"code": "GYM-390770", "className": "Yoga", "sessionId": "YOGA-2", "day": "Wednesday", "time": "19:00", "participants": 2, "pricePerParticipant": 8, "totalPrice": 16, "status": "Confirmed"},
+    {"code": "GYM-506911", "className": "Yoga", "sessionId": "YOGA-2", "day": "Wednesday", "time": "19:00", "participants": 2, "pricePerParticipant": 8, "totalPrice": 16, "status": "Confirmed"}
+  ]
 }

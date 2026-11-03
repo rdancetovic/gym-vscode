@@ -4,14 +4,20 @@
   const data = global.GymData;
   const reservation = global.GymReservation;
 
-  function mount(root, state) {
+  function mount(root, state, api) {
     if (!root) throw new Error("A root element is required to mount the reservation UI.");
 
     let currentState = state || data.createInitialState();
+    const apiClient = api || {};
     const selection = { classId: null, sessionId: null, participants: 1 };
     let reductionMessage = "";
     let screen = "form";
     let lastBooking = null;
+    let submissionPending = false;
+    let availabilityRefreshing = false;
+    let apiFeedback = "";
+    let availabilityRefreshError = "";
+    let lookupPending = false;
 
     root.innerHTML = [
       '<div data-reservation-form>',
@@ -55,10 +61,33 @@
       '      <ul data-status-problems></ul>',
       '    </div>',
       '    <button class="confirm-button" type="button" data-confirm aria-describedby="reservation-status" disabled>Confirm reservation</button>',
+      '    <p class="api-feedback" data-api-feedback role="alert" hidden></p>',
       '  </section>',
       '</div>',
       '</div>',
       '<section class="confirmation-screen" data-confirmation hidden></section>',
+      '<section class="reservation-lookup" aria-labelledby="lookup-heading">',
+      '  <h2 id="lookup-heading">Find a reservation</h2>',
+      '  <form class="lookup-form" data-lookup-form novalidate>',
+      '    <label class="lookup-field">Reservation code',
+      '      <input data-lookup-code type="text" inputmode="text" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false" pattern="GYM-[0-9]{6}">',
+      '    </label>',
+      '    <button class="confirm-button" type="submit" data-lookup-submit>Look up reservation</button>',
+      '  </form>',
+      '  <p class="api-feedback" data-lookup-feedback role="alert" hidden></p>',
+      '  <section class="lookup-result" data-lookup-result aria-labelledby="lookup-result-heading" aria-live="polite" hidden>',
+      '    <h3 id="lookup-result-heading">Reservation details</h3>',
+      '    <dl class="confirmation-summary lookup-summary">',
+      '      <div><dt>Reservation code</dt><dd data-lookup-result-code></dd></div>',
+      '      <div><dt>Class</dt><dd data-lookup-result-class></dd></div>',
+      '      <div><dt>Session</dt><dd data-lookup-result-session></dd></div>',
+      '      <div><dt>Participants</dt><dd data-lookup-result-participants></dd></div>',
+      '      <div><dt>Price per participant</dt><dd data-lookup-result-unit-price></dd></div>',
+      '      <div><dt>Total</dt><dd data-lookup-result-total></dd></div>',
+      '      <div><dt>Status</dt><dd data-lookup-result-status></dd></div>',
+      '    </dl>',
+      '  </section>',
+      '</section>',
       '<p class="visually-hidden" data-live-region aria-live="polite" aria-atomic="true"></p>'
     ].join("");
 
@@ -71,7 +100,13 @@
     const participantNote = root.querySelector("[data-participant-note]");
     const reductionMessageElement = root.querySelector("[data-reduction-message]");
     const confirmButton = root.querySelector("[data-confirm]");
+    const apiFeedbackElement = root.querySelector("[data-api-feedback]");
     const liveRegion = root.querySelector("[data-live-region]");
+    const lookupForm = root.querySelector("[data-lookup-form]");
+    const lookupCodeInput = root.querySelector("[data-lookup-code]");
+    const lookupSubmitButton = root.querySelector("[data-lookup-submit]");
+    const lookupFeedback = root.querySelector("[data-lookup-feedback]");
+    const lookupResult = root.querySelector("[data-lookup-result]");
 
     function createClassOption(gymClass, index) {
       const label = document.createElement("label");
@@ -87,6 +122,7 @@
       input.type = "radio";
       input.name = "gym-class";
       input.value = gymClass.id;
+      input.disabled = submissionPending;
       input.setAttribute("aria-label", gymClass.name + ", " + reservation.formatPrice(gymClass.price) + " per participant");
       surface.className = "class-surface";
       indexText.className = "class-index";
@@ -116,7 +152,7 @@
     }
 
     function renderSessions() {
-      const gymClass = data.getClassById(selection.classId);
+      const gymClass = data.getClassById(selection.classId, currentState);
       sessionContent.textContent = "";
       if (!gymClass) {
         sessionHeading.textContent = "Session";
@@ -155,7 +191,7 @@
         input.type = "radio";
         input.name = "gym-session";
         input.value = session.id;
-        input.disabled = isFull;
+        input.disabled = isFull || submissionPending;
         input.setAttribute("aria-label", session.day + " " + session.time + ", " + (isFull ? "Full" : remaining + " places left"));
         input.checked = selection.sessionId === session.id;
         surface.className = "session-surface";
@@ -187,6 +223,11 @@
       }
       decreaseButton.disabled = !hasAvailableSession || Number(selection.participants) <= 1;
       increaseButton.disabled = !hasAvailableSession || Number(selection.participants) >= remaining;
+      if (submissionPending) {
+        decreaseButton.disabled = true;
+        increaseButton.disabled = true;
+      }
+      participantInput.disabled = submissionPending || !hasAvailableSession;
       participantNote.textContent = hasAvailableSession
         ? "Choose between 1 and " + remaining + " participants."
         : "Choose an available session to set the participant count.";
@@ -195,15 +236,15 @@
     }
 
     function renderSummary() {
-      const gymClass = data.getClassById(selection.classId);
-      const foundSession = selection.sessionId ? data.findSession(selection.sessionId) : null;
+      const gymClass = data.getClassById(selection.classId, currentState);
+      const foundSession = selection.sessionId ? data.findSession(selection.sessionId, currentState) : null;
       const summaryValues = {
         "[data-summary-class]": gymClass ? gymClass.name : "—",
         "[data-summary-session]": foundSession ? foundSession.session.day + " " + foundSession.session.time : "—",
         "[data-summary-participants]": foundSession ? String(selection.participants) : "—",
         "[data-summary-unit-price]": gymClass ? reservation.formatPrice(gymClass.price) : "—",
         "[data-summary-total]": gymClass && foundSession
-          ? reservation.formatPrice(reservation.calcTotal(gymClass.id, selection.participants))
+          ? reservation.formatPrice(reservation.calcTotal(gymClass.id, selection.participants, currentState))
           : "—"
       };
       Object.keys(summaryValues).forEach(function (selector) {
@@ -224,18 +265,31 @@
         item.textContent = problem.message;
         problemList.appendChild(item);
       });
-      confirmButton.disabled = !isValid;
+      confirmButton.disabled = !isValid || submissionPending;
+      confirmButton.textContent = submissionPending ? "Submitting reservation…" : "Confirm reservation";
+      apiFeedbackElement.textContent = apiFeedback;
+      apiFeedbackElement.hidden = !apiFeedback;
+    }
+
+    function errorMessage(error) {
+      if (error && Number.isInteger(error.status)) {
+        return "Request failed (HTTP " + error.status + "): " + error.message;
+      }
+      return error && error.message ? error.message : "The request could not be completed.";
     }
 
     function announceStatus() {
       if (screen === "confirmation" && lastBooking) {
-        const remaining = reservation.getRemaining(currentState, lastBooking.sessionId);
-        const placesMessage = remaining === 0
-          ? "This session is now full."
-          : remaining + (remaining === 1 ? " place left in this session." : " places left in this session.");
+        const total = lastBooking.totalPrice === undefined ? lastBooking.total : lastBooking.totalPrice;
+        const placesMessage = availabilityRefreshing
+          ? " Availability is refreshing."
+          : availabilityRefreshError
+            ? " Availability could not be refreshed."
+            : " " + availabilityText(lastBooking.sessionId);
         liveRegion.textContent = "Reservation confirmed. You reserved " + lastBooking.participants +
           (lastBooking.participants === 1 ? " place for " : " places for ") + lastBooking.className + " on " +
-          lastBooking.day + " " + lastBooking.time + ". Total " + reservation.formatPrice(lastBooking.total) + ". " + placesMessage;
+          lastBooking.day + " " + lastBooking.time + ". Total " +
+          reservation.formatPrice(total === undefined ? 0 : total) + "." + placesMessage;
         return;
       }
 
@@ -247,7 +301,7 @@
         return;
       }
 
-      const total = reservation.calcTotal(selection.classId, selection.participants);
+      const total = reservation.calcTotal(selection.classId, selection.participants, currentState);
       const readyMessage = "Ready to confirm. Total " + reservation.formatPrice(total) + ".";
       liveRegion.textContent = reductionMessage ? reductionMessage + " " + readyMessage : readyMessage;
     }
@@ -265,33 +319,180 @@
 
     function renderConfirmation() {
       const booking = lastBooking;
-      const remaining = reservation.getRemaining(currentState, booking.sessionId);
-      const placesMessage = remaining === 0
-        ? "This session is now full."
-        : remaining + (remaining === 1 ? " place left in this session." : " places left in this session.");
+      const priceEach = booking.pricePerParticipant === undefined ? booking.priceEach : booking.pricePerParticipant;
+      const total = booking.totalPrice === undefined ? booking.total : booking.totalPrice;
 
       formContent.hidden = true;
       confirmationContent.hidden = false;
       confirmationContent.innerHTML = [
         '<p class="confirmation-eyebrow">RESERVATION COMPLETE</p>',
         '<h2 class="confirmation-heading" data-confirmation-heading tabindex="-1">Reservation confirmed</h2>',
-        '<p class="confirmation-message">You reserved ' + booking.participants + (booking.participants === 1 ? ' place for ' : ' places for ') + booking.className + ' on ' + booking.day + ' ' + booking.time + '.</p>',
+        '<p class="confirmation-message" data-confirmation-message></p>',
         '<dl class="confirmation-summary">',
-        '  <div><dt>Class</dt><dd>' + booking.className + '</dd></div>',
-        '  <div><dt>Session</dt><dd>' + booking.day + ' ' + booking.time + '</dd></div>',
-        '  <div><dt>Participants</dt><dd>' + booking.participants + '</dd></div>',
-        '  <div><dt>Price per participant</dt><dd>' + reservation.formatPrice(booking.priceEach) + '</dd></div>',
-        '  <div><dt>Total</dt><dd>' + reservation.formatPrice(booking.total) + '</dd></div>',
+        '  <div><dt>Reservation code</dt><dd data-confirmation-code></dd></div>',
+        '  <div><dt>Class</dt><dd data-confirmation-class></dd></div>',
+        '  <div><dt>Session</dt><dd data-confirmation-session></dd></div>',
+        '  <div><dt>Status</dt><dd data-confirmation-status></dd></div>',
+        '  <div><dt>Participants</dt><dd data-confirmation-participants></dd></div>',
+        '  <div><dt>Price per participant</dt><dd data-confirmation-unit-price></dd></div>',
+        '  <div><dt>Total</dt><dd data-confirmation-total></dd></div>',
         '</dl>',
-        '<p class="confirmation-availability" data-confirmation-availability>' + placesMessage + '</p>',
+        '<p class="confirmation-availability" data-confirmation-availability></p>',
+        '<p class="api-feedback" data-refresh-error role="status" hidden></p>',
         '<p class="no-payment-note">No payment is taken in this app.</p>',
-        '<button class="confirm-button" type="button" data-new-reservation>Make another reservation</button>'
+        '<button class="confirm-button" type="button" data-new-reservation disabled>Make another reservation</button>'
       ].join("");
+      confirmationContent.querySelector("[data-confirmation-message]").textContent =
+        "You reserved " + booking.participants + (booking.participants === 1 ? " place for " : " places for ") +
+        booking.className + " on " + booking.day + " " + booking.time + ".";
+      confirmationContent.querySelector("[data-confirmation-code]").textContent = booking.code || "—";
+      confirmationContent.querySelector("[data-confirmation-class]").textContent = booking.className;
+      confirmationContent.querySelector("[data-confirmation-session]").textContent = booking.day + " " + booking.time;
+      confirmationContent.querySelector("[data-confirmation-status]").textContent = booking.status || "Confirmed";
+      confirmationContent.querySelector("[data-confirmation-participants]").textContent = String(booking.participants);
+      confirmationContent.querySelector("[data-confirmation-unit-price]").textContent =
+        reservation.formatPrice(priceEach);
+      confirmationContent.querySelector("[data-confirmation-total]").textContent =
+        reservation.formatPrice(total);
+      confirmationContent.querySelector("[data-confirmation-availability]").textContent =
+        availabilityRefreshing ? "Refreshing availability…" : availabilityText(booking.sessionId);
+      const refreshError = confirmationContent.querySelector("[data-refresh-error]");
+      refreshError.textContent = availabilityRefreshError;
+      refreshError.hidden = !availabilityRefreshError;
+      const newReservationButton = confirmationContent.querySelector("[data-new-reservation]");
+      newReservationButton.disabled = availabilityRefreshing || Boolean(availabilityRefreshError);
+      newReservationButton.textContent = availabilityRefreshing ? "Refreshing availability…" : "Make another reservation";
       confirmationContent.querySelector("[data-confirmation-heading]").focus();
       announceStatus();
     }
 
+    function availabilityText(sessionId) {
+      const remaining = reservation.getRemaining(currentState, sessionId);
+      if (remaining === null) return "Current availability is unavailable.";
+      if (remaining === 0) return "This session is now full.";
+      return remaining + (remaining === 1 ? " place left in this session." : " places left in this session.");
+    }
+
+    function updateConfirmationAvailability() {
+      confirmationContent.querySelector("[data-confirmation-availability]").textContent =
+        availabilityRefreshing
+          ? "Refreshing availability…"
+          : availabilityRefreshError
+            ? "Availability could not be refreshed."
+            : availabilityText(lastBooking.sessionId);
+      const refreshError = confirmationContent.querySelector("[data-refresh-error]");
+      refreshError.textContent = availabilityRefreshError;
+      refreshError.hidden = !availabilityRefreshError;
+      const newReservationButton = confirmationContent.querySelector("[data-new-reservation]");
+      newReservationButton.disabled = availabilityRefreshing || Boolean(availabilityRefreshError);
+      newReservationButton.textContent = availabilityRefreshing
+        ? "Refreshing availability…"
+        : "Make another reservation";
+      announceStatus();
+    }
+
+    async function submitReservation() {
+      if (submissionPending) return;
+      const errors = reservation.validate(selection, currentState);
+      if (errors.length > 0) {
+        render({ announce: true });
+        return;
+      }
+
+      if (typeof apiClient.createReservation !== "function") {
+        const result = reservation.confirm(selection, currentState);
+        if (!result.ok) {
+          render({ announce: true });
+          return;
+        }
+        currentState = result.state;
+        lastBooking = result.booking;
+        screen = "confirmation";
+        renderConfirmation();
+        return;
+      }
+
+      submissionPending = true;
+      apiFeedback = "";
+      render();
+      try {
+        const booking = await apiClient.createReservation({
+          sessionId: selection.sessionId,
+          participants: Number(selection.participants)
+        });
+        lastBooking = booking;
+        screen = "confirmation";
+        submissionPending = false;
+        availabilityRefreshing = typeof apiClient.loadClasses === "function";
+        availabilityRefreshError = "";
+        renderConfirmation();
+
+        if (availabilityRefreshing) {
+          try {
+            const refreshedState = data.createStateFromApi(await apiClient.loadClasses());
+            refreshedState.bookings = currentState.bookings.concat(booking);
+            currentState = refreshedState;
+            availabilityRefreshing = false;
+          } catch (error) {
+            availabilityRefreshing = false;
+            availabilityRefreshError = "Reservation confirmed, but availability could not be refreshed: " +
+              errorMessage(error) + " Reload the page before making another reservation.";
+          }
+          updateConfirmationAvailability();
+        }
+      } catch (error) {
+        submissionPending = false;
+        apiFeedback = errorMessage(error);
+        render({ announce: true });
+      }
+    }
+
+    async function submitLookup(event) {
+      event.preventDefault();
+      if (lookupPending) return;
+
+      const code = lookupCodeInput.value.trim();
+      lookupResult.hidden = true;
+      lookupFeedback.textContent = "";
+      lookupFeedback.hidden = true;
+      if (!/^GYM-[0-9]{6}$/.test(code)) {
+        lookupFeedback.textContent = "Enter a reservation code in the format GYM-123456.";
+        lookupFeedback.hidden = false;
+        return;
+      }
+      if (typeof apiClient.getReservation !== "function") {
+        lookupFeedback.textContent = "Reservation lookup is unavailable.";
+        lookupFeedback.hidden = false;
+        return;
+      }
+
+      lookupPending = true;
+      lookupCodeInput.disabled = true;
+      lookupSubmitButton.disabled = true;
+      lookupSubmitButton.textContent = "Searching…";
+      try {
+        const found = await apiClient.getReservation(code);
+        root.querySelector("[data-lookup-result-code]").textContent = found.code;
+        root.querySelector("[data-lookup-result-class]").textContent = found.className;
+        root.querySelector("[data-lookup-result-session]").textContent = found.day + " " + found.time;
+        root.querySelector("[data-lookup-result-participants]").textContent = String(found.participants);
+        root.querySelector("[data-lookup-result-unit-price]").textContent = reservation.formatPrice(found.pricePerParticipant);
+        root.querySelector("[data-lookup-result-total]").textContent = reservation.formatPrice(found.totalPrice);
+        root.querySelector("[data-lookup-result-status]").textContent = found.status;
+        lookupResult.hidden = false;
+      } catch (error) {
+        lookupFeedback.textContent = errorMessage(error);
+        lookupFeedback.hidden = false;
+      } finally {
+        lookupPending = false;
+        lookupCodeInput.disabled = false;
+        lookupSubmitButton.disabled = false;
+        lookupSubmitButton.textContent = "Look up reservation";
+      }
+    }
+
     function startAnotherReservation() {
+      if (availabilityRefreshing || availabilityRefreshError) return;
       screen = "form";
       lastBooking = null;
       selection.classId = null;
@@ -303,7 +504,7 @@
     }
 
     function handleChange(event) {
-      if (screen !== "form") return;
+      if (screen !== "form" || submissionPending) return;
       const target = event.target;
       if (target.matches('input[name="gym-class"]')) {
         selection.classId = target.value;
@@ -325,7 +526,7 @@
     }
 
     function handleInput(event) {
-      if (screen !== "form") return;
+      if (screen !== "form" || submissionPending) return;
       if (!event.target.matches("[data-participant-input]")) return;
       selection.participants = event.target.value === "" ? "" : Number(event.target.value);
       reductionMessage = "";
@@ -338,22 +539,14 @@
         startAnotherReservation();
         return;
       }
-      if (screen !== "form") return;
+      if (screen !== "form" || submissionPending) return;
       if (target.matches("[data-decrease]") && !target.disabled) {
         selection.participants = Math.max(1, Number(selection.participants) - 1);
       } else if (target.matches("[data-increase]") && !target.disabled) {
         const remaining = reservation.getRemaining(currentState, selection.sessionId);
         selection.participants = Math.min(remaining, Number(selection.participants) + 1);
       } else if (target.matches("[data-confirm]") && !target.disabled) {
-        const result = reservation.confirm(selection, currentState);
-        if (!result.ok) {
-          render({ announce: true });
-          return;
-        }
-        currentState = result.state;
-        lastBooking = result.booking;
-        screen = "confirmation";
-        renderConfirmation();
+        submitReservation();
         return;
       } else {
         return;
@@ -362,12 +555,13 @@
       render({ announce: true });
     }
 
-    data.classes.forEach(function (gymClass, index) {
+    data.getClasses(currentState).forEach(function (gymClass, index) {
       classList.appendChild(createClassOption(gymClass, index));
     });
     root.addEventListener("change", handleChange);
     root.addEventListener("input", handleInput);
     root.addEventListener("click", handleClick);
+    lookupForm.addEventListener("submit", submitLookup);
     render();
 
     return {
@@ -377,6 +571,7 @@
         root.removeEventListener("change", handleChange);
         root.removeEventListener("input", handleInput);
         root.removeEventListener("click", handleClick);
+        lookupForm.removeEventListener("submit", submitLookup);
         root.textContent = "";
       }
     };

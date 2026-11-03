@@ -4,7 +4,7 @@
 
 This plan maps the approved `REQUIREMENTS.md` to automated and manual verification. API-01 domain tests, API-02 persistence tests, API-03 `POST /reservations`, API-04 `GET /classes`, API-06 `GET /reservations/{code}`, API-07 `DELETE /reservations/{code}`, and API-08 error-contract verification have been implemented and run.
 
-The existing browser suite is loaded from `tests/tests.html`. All 112 tests passed when run through the Java server after API-02 changes; the browser suite has not been rerun after API-03/API-04/API-06/API-07 because frontend files were unchanged. The Java domain, persistence, reservation-endpoint, and classes-endpoint suites are standalone test mains compiled with the installed JDK; no third-party test library or build system is used. Latest observed results: API-01 58 assertions, API-02 21, combined API-03/API-06/API-07 reservation endpoints 162, and API-04 250, all passed.
+The existing browser suite is loaded from `tests/tests.html`. The 112-test suite passed after API-02 changes; the latest run after UI-01 integration passed **119/119** tests in the integrated browser using the `file:///C:/Users/RadeDancetovic/CC-Training/gym-vscode/tests/tests.html` page. The Java domain, persistence, reservation-endpoint, and classes-endpoint suites are standalone test mains compiled with the installed JDK; no third-party test library or build system is used. Latest Java results remain API-01 58 assertions, API-02 21, combined API-03/API-06/API-07 reservation endpoints 162, and API-04 250, all passed in the prior API-08 run.
 
 ## Test approach
 
@@ -36,7 +36,7 @@ The existing browser suite is loaded from `tests/tests.html`. All 112 tests pass
 | Failed-operation integrity | For each defined failing operation, compare reservations and availability before/after; no stored data changes. |
 | File initialization and persistence | With no data file, initialize original availability. After booking, restart and verify record/status/remaining places. Cancel, restart again, verify Cancelled record and restored availability. |
 | API-02 state store | Java tests verify creation of missing `data/reservations.json` state, loading existing state, saving availability/reservation/status changes, restoration through a new store instance, and explicit read/write failures. |
-| Frontend/API integration | Verify catalogue loads from API; valid confirmation submits to API; UI uses server response; starting another reservation shows current server availability; API errors display clear feedback and do not appear as success. |
+| UI-01 live catalogue and reservation flow | Browser integration tests use controlled API responses to verify catalogue loading, live class/session/price/availability rendering, session selection, participant limits, summary totals, explicit confirmation before POST, POST body, response-sourced confirmation/code, readable API failures, post-success availability reload, retry after catalogue-load failure, and relative `/classes` and `/reservations` paths. Existing UI tests retain participant, validation, anonymity, payment, accessibility, and presentation regressions. |
 | Responsive/accessibility regression | Preserve applicable existing keyboard, focus, live-region, light/dark, reduced-motion, and viewport behavior; run established manual checks where available. |
 | Scope | Verify no accounts, personal data, payment processing, or simultaneous multi-visitor behavior was added. |
 
@@ -108,6 +108,8 @@ Update old tests/manual expectations that specifically require refresh/reopen to
 
 ## Manual checks
 
+The UI-01 Java-server end-to-end check remains pending. The Java debug launch timed out without an active session being detected; no retry or terminal-based relaunch was performed. Do not treat the browser tests with controlled API responses as a substitute for this manual check.
+
 | ID | Check | Expected result |
 |---|---|---|
 | M1 | Open the application against an initialized data file and inspect each class. | Four classes, prices, sessions, days/times, capacity and current places match the API data. |
@@ -128,8 +130,8 @@ Update old tests/manual expectations that specifically require refresh/reopen to
 - The frontend and server use the approved same-origin host on port 3000; the server must be launched from the repository root to serve the frontend and use the configured state path.
 - The BRDs specify readable API errors but not the JSON error shape.
 - The BRDs do not prescribe status codes or UI behavior for file read/write failures. Do not assert an unapproved response code for those failures.
-- The browser suite passed 112/112 tests after API-02 changes; it was not rerun after API-03/API-04 because frontend files were unchanged.
-- The browser suite has not been rerun after API-07; no frontend files changed for API-07.
+- The browser suite’s initial 112/112 result was recorded after API-02; the latest post-UI-01 run is 119/119.
+- The browser suite was rerun after UI-01 changes and passed 119/119 tests.
 - Latest Java run: API-01 **58 assertions passed**, API-02 **21 assertions passed**, combined reservation endpoint suite **162 assertions passed**, API-04 **250 assertions passed**.
 
 ## Java domain, persistence, and API test command

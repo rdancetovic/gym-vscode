@@ -16,14 +16,14 @@
   }
 
   function isClassFull(state, classId) {
-    const gymClass = data.getClassById(classId);
+    const gymClass = data.getClassById(classId, state);
     return Boolean(gymClass && gymClass.sessions.every(function (session) {
       return isFull(state, session.id);
     }));
   }
 
-  function calcTotal(classId, participants) {
-    const gymClass = data.getClassById(classId);
+  function calcTotal(classId, participants, state) {
+    const gymClass = data.getClassById(classId, state);
     const count = Number(participants);
     if (!gymClass || !Number.isFinite(count)) return null;
     return count * gymClass.price;
@@ -43,8 +43,8 @@
     const selection = draft || {};
     const currentState = state || data.createInitialState();
     const errors = [];
-    const gymClass = data.getClassById(selection.classId);
-    const foundSession = data.findSession(selection.sessionId);
+    const gymClass = data.getClassById(selection.classId, currentState);
+    const foundSession = data.findSession(selection.sessionId, currentState);
     const participants = Number(selection.participants);
 
     if (!selection.classId) {
@@ -91,10 +91,10 @@
       return { ok: false, state: currentState, booking: null, errors: errors };
     }
 
-    const gymClass = data.getClassById(draft.classId);
-    const foundSession = data.findSession(draft.sessionId);
+    const gymClass = data.getClassById(draft.classId, currentState);
+    const foundSession = data.findSession(draft.sessionId, currentState);
     const participants = Number(draft.participants);
-    const total = calcTotal(gymClass.id, participants);
+    const total = calcTotal(gymClass.id, participants, currentState);
     const booking = {
       classId: gymClass.id,
       className: gymClass.name,
@@ -111,6 +111,7 @@
       availability: availability,
       bookings: currentState.bookings.concat(booking)
     };
+    if (currentState.catalogue) nextState.catalogue = currentState.catalogue;
 
     return { ok: true, state: nextState, booking: booking, errors: [] };
   }

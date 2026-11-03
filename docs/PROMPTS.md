@@ -432,3 +432,42 @@ Record significant AI prompts used during project development and the resulting 
 > Extend the existing ReservationApiHandler.java without creating a separate handler or route. Preserve POST and GET. For a Confirmed reservation, set status Cancelled, restore all participants to availability, persist both changes, and return HTTP 200 with all required Reservation fields. Return 400 for malformed codes, 404 for well-formed unknown codes, and 409 for already Cancelled reservations, with the specified messages. Failed operations must not modify state; failed persistence must not report success or change in-memory state. Keep cancelled reservations available for GET. Reuse existing state-store, validation, serialization, and error functionality; add HTTP tests and rerun all Java tests. Do not modify frontend files, implement API-08 or later, or change task statuses/review records.
 
 **Result:** Added DELETE dispatch to `ReservationApiHandler` and cancellation/persistence/error-integrity tests to `ReservationApiHandlerTest`. The final Java run passed 58 API-01, 21 API-02, 95 combined reservation-endpoint, and 250 API-04 assertions. No frontend or task/review changes were made.
+
+## 14. Implement UI-01 complete reservation flow
+
+**Purpose:** Replace the separate UI-01/UI-02 tasks with one complete frontend/API-integrated reservation flow.
+
+**Prompt (actual user request):**
+
+> ### UI-01 — Complete Reservation Flow (UI Integration)
+> **Description:**
+>
+> Integrate the existing frontend reservation flow with the backend API, replacing the hard-coded catalogue and availability data with live server data.
+>
+> **Acceptance Criteria:**
+>
+> 1. Load available classes, prices, sessions, and remaining places using `GET /classes`.
+> 2. Display all classes and their available sessions using data returned by the API.
+> 3. Allow visitors to select a class and session.
+> 4. Display current remaining places and prevent selecting more participants than available.
+> 5. Allow visitors to select the number of participants within valid limits.
+> 6. Display a reservation summary containing class name, session day and time, participant count, price per participant, and total price.
+> 7. Validate the selection and require explicit visitor confirmation before submitting a reservation.
+> 8. Submit the reservation using `POST /reservations`, sending the selected `sessionId` and participant count.
+> 9. Display the reservation confirmation using the successful API response, including the reservation code and relevant reservation details.
+> 10. Display meaningful feedback when reservation submission fails, using the API error response where available.
+> 11. Refresh availability after a successful reservation so the visitor can make another reservation using current server data.
+> 12. Handle catalogue-loading failures without displaying hard-coded or fabricated availability as current data.
+> 13. Preserve the existing UI design, validation behavior, and accessibility features where applicable.
+> 14. Do not request or collect personal, account, or payment information.
+>
+> **Dependencies:** API-04, API-05, API-06, PREP-02.
+>
+> **Testing:**
+>
+> - Automated browser tests covering catalogue loading, selection, participant limits, summary, validation, confirmation, successful submission, API errors, and availability refresh.
+> - Manual end-to-end verification through the Java server.
+>
+> **Scope:** This task replaces the separate UI-01 and UI-02 tasks. No task status or review record should be changed without explicit user approval.
+
+**Result:** Consolidated UI-01/UI-02 in `TASKS.md` without changing status or review fields. Added live API catalogue loading, POST submission after explicit confirmation, response-based confirmation, failure feedback, post-success availability reload, and no-fallback catalogue failure handling. The browser suite passed 119/119; manual Java-server verification remains pending after an unconfirmed debug launch timeout.

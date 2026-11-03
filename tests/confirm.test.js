@@ -172,8 +172,10 @@
     });
     it("collects no personal or payment fields", function () {
       withApp(function (host) {
-        assert.equal(host.querySelectorAll("form").length, 0);
-        assert.equal(host.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="password"]').length, 0);
+        assert.equal(host.querySelectorAll("form").length, 1);
+        assert.same(host.querySelector("form input"), host.querySelector("[data-lookup-code]"));
+        assert.equal(host.querySelectorAll('input[type="text"]').length, 1);
+        assert.equal(host.querySelectorAll('input[type="email"], input[type="tel"], input[type="password"]').length, 0);
         assert.equal(host.querySelectorAll('input[type="radio"]').length, 4);
         assert.equal(host.querySelectorAll('input[type="number"]').length, 1);
       });

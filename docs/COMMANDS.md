@@ -141,3 +141,22 @@ git diff --check; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; git status --
 ```
 
 Checked whitespace, worktree status, and the API-08 test diff.
+
+## UI-01 verification
+
+Opened `file:///C:/Users/RadeDancetovic/CC-Training/gym-vscode/tests/tests.html` in the integrated browser after UI-01 changes. The browser suite reported **119 passed, 0 failed**.
+
+Attempted to start `GymReservationServer` using the Java debug launch tool for manual end-to-end verification. The tool timed out; a single debug-session status check found no active session. The manual server-backed UI verification is therefore not recorded as passed.
+
+User-reported successful reservation lookup during UI-01 manual verification:
+
+```http
+GET http://localhost:3000/reservations/GYM-506911
+```
+
+```powershell
+git status --short; git diff --stat; git diff --check
+```
+
+Checked the UI-01 worktree changes and whitespace. (This command is recorded here after execution.)
+Observed result: `git diff --check` passed.

@@ -87,7 +87,7 @@ API-05 verified the existing `POST /reservations` contract against its acceptanc
 
 API-06 `GET /reservations/{code}` is now implemented in the existing reservation handler alongside POST. It validates the exact code format, returns stored Confirmed/Cancelled Reservation fields, and performs no state writes. The reservation HTTP tests cover lookup success and errors, read-only behavior, and method/path handling.
 
-API-07 `DELETE /reservations/{code}` is implemented in that same handler. Confirmed reservations are marked Cancelled, their places are restored, and the changed state is persisted before returning HTTP 200. Tests cover success, persistence, lookup after cancellation, malformed/unknown/repeat-cancel errors, state integrity, and save failure. The latest Java run passed API-01 58, API-02 21, combined reservation-endpoint 95, and API-04 250 assertions. API-08 verification and frontend integration remain.
+API-07 `DELETE /reservations/{code}` is implemented in that same handler. Confirmed reservations are marked Cancelled, their places are restored, and the changed state is persisted before returning HTTP 200. Tests cover success, persistence, lookup after cancellation, malformed/unknown/repeat-cancel errors, state integrity, and save failure. API-08 error-contract verification is also implemented and passed. Java results from the latest complete API verification were API-01 58, API-02 21, combined reservation-endpoint 162, and API-04 250 assertions.
 
 ### Work
 
@@ -117,6 +117,10 @@ Use the exact JSON field names, types, response fields, and success statuses in 
 Phase 1 domain and persistence behavior; approved API runtime/address and test tooling.
 
 ## Phase 3 — Integrate the existing reservation UI
+
+### Implementation progress
+
+The UI is now initialized from `GET /classes` rather than the hard-coded catalogue. Class/session selections, participant validation, and price summaries use the returned data; explicit confirmation submits the selected session and participants to `POST /reservations`. Confirmation details and code use the successful response. Submission errors display the HTTP status and API message, and successful submission reloads availability before allowing another reservation. Catalogue-loading failures do not render fallback availability. The browser suite passes 119/119 tests, including the live-API integration tests. Manual verification through the Java server remains pending because the Java debug launch timed out without an active session being detected.
 
 ### Work
 
@@ -215,4 +219,4 @@ The following implementation details remain open:
 1. **Reservation-code exhaustion response.** API-03 uses randomized starting points with a scan of the six-digit code space to avoid collisions and detect exhaustion. The BRDs do not prescribe an HTTP status for exhaustion; the implementation currently returns 503.
 2. **API error representation.** The BRDs specify readable messages but do not prescribe the JSON error shape; the create endpoint returns a JSON object with a `message` field.
 3. **Persistence failure API behavior.** The BRDs do not prescribe the HTTP status or UI behavior for file failures; the create endpoint currently returns 500 after a save failure and leaves active/persisted state unchanged.
-4. **Later endpoint/test approach.** `POST /reservations` has handler-level HTTP tests; the remaining endpoints and broader API/UI integration tests remain for their separately authorized tasks.
+4. **Manual frontend verification.** The controlled-response browser integration suite has passed; manual UI/API end-to-end verification through the Java server remains pending.

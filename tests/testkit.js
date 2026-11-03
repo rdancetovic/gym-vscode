@@ -50,17 +50,17 @@
     }
   };
 
-  function run() {
+  async function run() {
     const results = document.getElementById("results");
     const summary = document.getElementById("summary");
     let passed = 0;
     let failed = 0;
     results.textContent = "";
 
-    tests.forEach(function (test) {
+    for (const test of tests) {
       const row = document.createElement("li");
       try {
-        test.run();
+        await test.run();
         passed += 1;
         row.textContent = "PASS  " + test.name;
         row.dataset.result = "pass";
@@ -70,7 +70,7 @@
         row.dataset.result = "fail";
       }
       results.appendChild(row);
-    });
+    }
 
     summary.textContent = failed === 0
       ? "All " + passed + " tests passed"

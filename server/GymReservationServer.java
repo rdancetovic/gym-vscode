@@ -10,7 +10,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class GymReservationServer {
-    private static final int PORT = 3000;
+    private static final int PORT = Integer.getInteger("gym.server.port", 3000);
     private static final String HTML_CONTENT_TYPE = "text/html; charset=utf-8";
     private static final String CSS_CONTENT_TYPE = "text/css; charset=utf-8";
     private static final String JAVASCRIPT_CONTENT_TYPE = "text/javascript; charset=utf-8";
@@ -32,7 +32,7 @@ public final class GymReservationServer {
                 stateStore, new GymReservationDomain(), new ReservationCodeGenerator()));
         server.createContext("/", exchange -> serveFrontend(exchange, webRoot));
         server.start();
-        System.out.println("Gym Reservation server listening at http://localhost:" + PORT);
+        System.out.println("Gym Reservation server listening at http://localhost:" + server.getAddress().getPort());
     }
 
     private static void serveFrontend(HttpExchange exchange, Path webRoot) throws IOException {
